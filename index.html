@@ -1,35 +1,33 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Apps-United</title>
 
-  <!-- PWA + icons you already had -->
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" sizes="192x192" href="favicon-192.png" />
-  <link rel="icon" sizes="512x512" href="favicon-512.png" />
-  <link rel="icon" href="favicon.ico" />
-
-  <!-- Your existing site styles (keep) -->
+  <!-- Your existing styles -->
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Minimal auth styles (new) -->
-  <link rel="stylesheet" href="auth.css" />
+  <!-- OPTIONAL: app icons you already have -->
+  <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="favicon-512.png" />
+  <link rel="icon" href="favicon.ico" />
 </head>
 <body>
-  <!-- Root where the app mounts -->
+  <!-- ✅ React mounts here -->
   <div id="auth-root"></div>
 
-  <!-- React + Babel (CDN, no build needed) -->
+  <!-- ✅ React & ReactDOM (UMD builds) -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+
+  <!-- ✅ Babel for in-browser JSX (fine for staging) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Supabase JS (v2) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Our app (JSX). Keep this as the LAST script. -->
+  <!-- ❌ Remove Supabase for now (we're reverting to demo localStorage auth)
+       If you keep it, it won't hurt, but it's unnecessary. -->
+
+  <!-- ✅ Your app (must be after React/ReactDOM/Babel) -->
   <script type="text/babel" src="auth-app.jsx"></script>
 </body>
 </html>
