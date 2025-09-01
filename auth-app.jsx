@@ -221,105 +221,117 @@ function App() {
           <div className="au-card-header">
             <h2 style={{ margin: 0, fontWeight: 600 }}>Create your account</h2>
           </div>
-        <div className="au-card-content">
-          {err && <ErrorNote>{err}</ErrorNote>}
-          <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label className="au-note">Full name</label>
-              <input
-                className="au-input"
-                placeholder="Jane Doe"
-                value={signupForm.fullName}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, fullName: e.target.value })
-                }
-              />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label className="au-note">Email</label>
-              <input
-                className="au-input"
-                type="email"
-                placeholder="you@example.com"
-                value={signupForm.email}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="au-note">Password</label>
-              <input
-                className="au-input"
-                type="password"
-                placeholder="Min 8 characters"
-                value={signupForm.password}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, password: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="au-note">Confirm password</label>
-              <input
-                className="au-input"
-                type="password"
-                placeholder="Repeat password"
-                value={signupForm.confirm}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, confirm: e.target.value })
-                }
-              />
-            </div>
-            <div style={{ gridColumn: "1 / -1" }} className="au-row">
-              <input
-                type="checkbox"
-                checked={signupForm.agree}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, agree: e.target.checked })
-                }
-              />
-              <span>
-                I agree to the{" "}
-                <a href="#" onClick={(e) => e.preventDefault()}>
-                  Terms & Conditions
-                </a>.
-              </span>
-            </div>
-            <div style={{ gridColumn: "1 / -1" }} className="au-row">
-              <input
-                type="checkbox"
-                checked={signupForm.optIn}
-                onChange={(e) =>
-                  setSignupForm({ ...signupForm, optIn: e.target.checked })
-                }
-              />
-              <span>
-                Send me helpful updates and the occasional ✨ good spam ✨
-              </span>
-            </div>
-            <div
-              className="au-row"
-              style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}
-            >
-              <button type="submit" className="au-btn au-btn-primary">
-                Create account
-              </button>
-              <button
-                type="button"
-                className="au-btn au-btn-secondary"
-                onClick={() => setRoute("login")}
+          <div className="au-card-content">
+            {err && <ErrorNote>{err}</ErrorNote>}
+            <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
+              {/* Full name (UNCONTROLLED) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="au-note">Full name</label>
+                <input
+                  className="au-input"
+                  placeholder="Jane Doe"
+                  defaultValue={signupForm.fullName}
+                  onInput={(e) =>
+                    setSignupForm((s) => ({ ...s, fullName: e.currentTarget.value }))
+                  }
+                  autoComplete="name"
+                />
+              </div>
+
+              {/* Email (UNCONTROLLED) */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="au-note">Email</label>
+                <input
+                  className="au-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  defaultValue={signupForm.email}
+                  onInput={(e) =>
+                    setSignupForm((s) => ({ ...s, email: e.currentTarget.value }))
+                  }
+                  autoComplete="email"
+                />
+              </div>
+
+              {/* Password (UNCONTROLLED) */}
+              <div>
+                <label className="au-note">Password</label>
+                <input
+                  className="au-input"
+                  type="password"
+                  placeholder="Min 8 characters"
+                  defaultValue={signupForm.password}
+                  onInput={(e) =>
+                    setSignupForm((s) => ({ ...s, password: e.currentTarget.value }))
+                  }
+                  autoComplete="new-password"
+                />
+              </div>
+
+              {/* Confirm password (UNCONTROLLED) */}
+              <div>
+                <label className="au-note">Confirm password</label>
+                <input
+                  className="au-input"
+                  type="password"
+                  placeholder="Repeat password"
+                  defaultValue={signupForm.confirm}
+                  onInput={(e) =>
+                    setSignupForm((s) => ({ ...s, confirm: e.currentTarget.value }))
+                  }
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div style={{ gridColumn: "1 / -1" }} className="au-row">
+                <input
+                  type="checkbox"
+                  checked={signupForm.agree}
+                  onChange={(e) =>
+                    setSignupForm({ ...signupForm, agree: e.target.checked })
+                  }
+                />
+                <span>
+                  I agree to the{" "}
+                  <a href="#" onClick={(e) => e.preventDefault()}>
+                    Terms & Conditions
+                  </a>.
+                </span>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }} className="au-row">
+                <input
+                  type="checkbox"
+                  checked={signupForm.optIn}
+                  onChange={(e) =>
+                    setSignupForm({ ...signupForm, optIn: e.target.checked })
+                  }
+                />
+                <span>
+                  Send me helpful updates and the occasional ✨ good spam ✨
+                </span>
+              </div>
+              <div
+                className="au-row"
+                style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}
               >
-                I already have an account
-              </button>
-            </div>
-          </form>
-        </div>
-        <div className="au-card-footer">
-          <p className="au-note" style={{ textAlign: "center" }}>
-            We respect your inbox. Unsubscribe anytime.
-          </p>
-        </div>
+                <button type="submit" className="au-btn au-btn-primary">
+                  Create account
+                </button>
+                <button
+                  type="button"
+                  className="au-btn au-btn-secondary"
+                  onClick={() => setRoute("login")}
+                >
+                  I already have an account
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="au-card-footer">
+            <p className="au-note" style={{ textAlign: "center" }}>
+              We respect your inbox. Unsubscribe anytime.
+            </p>
+          </div>
         </div>
       </div>
     </Shell>
