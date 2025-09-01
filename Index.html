@@ -1,107 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Uzbekistan Blog</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      padding: 20px;
-    }
-
-    #musicToggle {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(0,0,0,0.7);
-      color: #fff;
-      border: none;
-      padding: 10px 14px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 20px;
-      z-index: 9999;
-      transition: background 0.3s;
-    }
-
-    #musicToggle:hover {
-      background: rgba(0,0,0,0.9);
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Affiliate App</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Welcome to My Uzbekistan Blog</h1>
-  <p>Enjoy reading while listening to traditional Uzbek-inspired music in the background.</p>
+  <header>
+    <h1>Affiliate App</h1>
+  </header>
 
-  <!-- Hidden YouTube background music -->
-  <iframe 
-    id="musicPlayer"
-    width="0" height="0"
-    src="https://www.youtube.com/embed/w0Xf89MreA0?enablejsapi=1&autoplay=1&loop=1&playlist=w0Xf89MreA0&mute=1"
-    frameborder="0"
-    allow="autoplay">
-  </iframe>
+  <main>
+    <div id="catalog"></div>
+  </main>
 
-  <!-- Music toggle button -->
-  <button id="musicToggle">🎵</button>
+  <footer>
+    Affiliate destinations always open on the network (no WebViews), so tracking and deep links work.
+  </footer>
 
   <script>
-    // Load YouTube IFrame API
-    var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    const DEFAULT_LOGO_REGISTRY_URL =
+      "https://api.jsonbin.io/v3/b/68b22be843b1c97be92fc6a0/latest?meta=false";
 
-    var player;
-    var isMuted = true;
+    const DEFAULT_PARTNERS = [
+      { id: "amazon", name: "Amazon", url: "https://www.amazon.com/?tag=YOURTAG-20" },
+      { id: "hellotickets", name: "HelloTickets", url: "https://www.hellotickets.com/?affid=YOURID" },
+      { id: "viator", name: "Viator", url: "https://www.viator.com/?pid=YOURPID" },
+      { id: "agoda", name: "Agoda", url: "https://www.agoda.com/?cid=YOURCID" }
+    ];
 
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('musicPlayer', {
-        events: {
-          'onReady': onPlayerReady
-        }
+    let logoRegistry = {};
+
+    async function loadRegistry() {
+      const res = await fetch(DEFAULT_LOGO_REGISTRY_URL);
+      const data = await res.json();
+      logoRegistry = data;
+    }
+
+    function render() {
+      const catalog = document.getElementById("catalog");
+      catalog.innerHTML = "";
+      DEFAULT_PARTNERS.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "tile";
+        div.innerHTML = `
+          <img src="${logoRegistry[p.id] || ""}" alt="${p.name}" width="60" />
+          <div>${p.name}</div>
+        `;
+        div.onclick = () => window.open(p.url, "_blank");
+        catalog.appendChild(div);
       });
     }
 
-    function onPlayerReady(event) {
-      // Start muted
-      event.target.playVideo();
-
-      // Unmute + fade when user interacts
-      let unmute = () => {
-        if (isMuted) {
-          player.unMute();
-          let vol = 0;
-          let fade = setInterval(() => {
-            if (vol < 100) {
-              vol += 5;
-              player.setVolume(vol);
-            } else {
-              clearInterval(fade);
-            }
-          }, 200);
-          isMuted = false;
-        }
-        window.removeEventListener('click', unmute);
-        window.removeEventListener('scroll', unmute);
-      };
-
-      window.addEventListener('click', unmute);
-      window.addEventListener('scroll', unmute);
-
-      // Toggle button
-      document.getElementById("musicToggle").addEventListener("click", () => {
-        if (isMuted) {
-          player.unMute();
-          player.setVolume(70);
-          isMuted = false;
-        } else {
-          player.mute();
-          isMuted = true;
-        }
-      });
-    }
+    (async function init() {
+      await loadRegistry();
+      render();
+    })();
   </script>
 </body>
 </html>
