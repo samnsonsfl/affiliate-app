@@ -1,11 +1,24 @@
-/* auth-app.jsx — Apps-United login, signup, dashboard (CDN React, no build) */
+/* auth-app.jsx — Apps-United + Supabase Auth (CDN React, no build) */
 const { useState, useEffect, useMemo, Component } = React;
 
-/* -------------------- Error Boundary -------------------- */
+/* ====== 0) CONFIG — put your real project values here ====== */
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";      // ← replace
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";             // ← replace
+
+/* ====== 1) Supabase client ====== */
+const supabase = window.supabase.createClient(https://pvfxettbmykvezwahohh.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ, {
+  auth: {
+    persistSession: true,          // store session in localStorage
+    autoRefreshToken: true,
+    detectSessionInUrl: false,     // we’re not using magic links here
+  },
+});
+
+/* ====== 2) Error boundary (so blank pages show an error panel) ====== */
 class ErrorBoundary extends Component {
-  constructor(props){ super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(error){ return { error }; }
-  componentDidCatch(error, info){ console.error("Apps-United error:", error, info); }
+  constructor(p){ super(p); this.state = { error: null }; }
+  static getDerivedStateFromError(e){ return { error: e }; }
+  componentDidCatch(e, info){ console.error("Apps-United error:", e, info); }
   render(){
     if (this.state.error) {
       return (
@@ -21,34 +34,10 @@ class ErrorBoundary extends Component {
   }
 }
 
-/* -------------------- Storage & helpers -------------------- */
-const LS_USERS = "appsUnited.users";
-const LS_SESSION = "appsUnited.session";
+/* ====== 3) App data & helpers ====== */
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+const LS_LAST_ACTIVE = "appsUnited.lastActive"; // for sliding 30-day logout
 
-const demoHash = (s) => "hash_" + btoa(unescape(encodeURIComponent(s))).replace(/=/g, "");
-
-function loadUsers(){ try { return JSON.parse(localStorage.getItem(LS_USERS) || "[]"); } catch { return []; } }
-function saveUsers(u){ localStorage.setItem(LS_USERS, JSON.stringify(u)); }
-function loadSession(){ try { return JSON.parse(localStorage.getItem(LS_SESSION) || "null"); } catch { return null; } }
-function saveSession(s){ localStorage.setItem(LS_SESSION, JSON.stringify(s)); }
-function clearSession(){ localStorage.removeItem(LS_SESSION); }
-
-function getUserByEmail(email){
-  return loadUsers().find(u => u.email.toLowerCase() === (email||"").toLowerCase());
-}
-function upsertUser(user){
-  const users = loadUsers();
-  const i = users.findIndex(u => u.email.toLowerCase() === user.email.toLowerCase());
-  if (i >= 0) users[i] = user; else users.push(user);
-  saveUsers(users);
-}
-function isSessionFresh(s, now=Date.now()){
-  if (!s) return false;
-  return s.persistent && (now - (s.lastActive || 0)) < THIRTY_DAYS;
-}
-
-/* -------------------- Starter apps -------------------- */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
   { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
@@ -56,7 +45,20 @@ const defaultApps = [
   { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
 ];
 
-/* -------------------- Shell & small UI -------------------- */
+function getLastActive() {
+  try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); }
+  catch { return 0; }
+}
+function bumpLastActive() {
+  try { localStorage.setItem(LS_LAST_ACTIVE, String(Date.now())); } catch {}
+}
+function isWithinThirtyDays() {
+  const last = getLastActive();
+  if (!last) return false;
+  return (Date.now() - last) < THIRTY_DAYS;
+}
+
+/* ====== 4) UI Shell ====== */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container">
@@ -79,15 +81,14 @@ function Shell({ route, onLogout, children }) {
 function ErrorNote({ children }) {
   return (
     <div className="au-card" style={{
-      borderColor: "rgba(248,113,113,.5)", background:"rgba(248,113,113,.12)",
-      padding: 12, marginBottom: 8
+      borderColor:"rgba(248,113,113,.5)", background:"rgba(248,113,113,.12)", padding:12, marginBottom:8
     }}>
       <span>⚠️</span> <span style={{ marginLeft: 8 }}>{children}</span>
     </div>
   );
 }
 
-/* ==================== TOP-LEVEL PAGES (stable identity!) ==================== */
+/* ====== 5) Top-level pages (stable identity) ====== */
 function LoginPage({ err, form, setForm, onSubmit, goSignup, route, onLogout }) {
   return (
     <Shell route={route} onLogout={onLogout}>
@@ -189,10 +190,7 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
                   type="checkbox" checked={form.agree}
                   onChange={(e)=>{ const v=e.target.checked; setForm(s=>({...s, agree:v})); }}
                 />
-                <span>
-                  I agree to the{" "}
-                  <a href="#" onClick={(e)=>e.preventDefault()}>Terms & Conditions</a>.
-                </span>
+                <span>I agree to the <a href="#" onClick={(e)=>e.preventDefault()}>Terms & Conditions</a>.</span>
               </div>
               <div style={{ gridColumn: "1 / -1" }} className="au-row">
                 <input
@@ -225,7 +223,7 @@ function DashboardPage({ me, route, onLogout }) {
       <div className="au-grid" style={{ gap: 24 }}>
         <div>
           <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-            Welcome{me?.fullName ? `, ${me.fullName.split(" ")[0]}` : ""} 👋
+            Welcome{me?.full_name ? `, ${me.full_name.split(" ")[0]}` : ""} 👋
           </h2>
           <div className="au-note">Your starter apps are ready. Add more soon.</div>
         </div>
@@ -260,7 +258,7 @@ function DashboardPage({ me, route, onLogout }) {
   );
 }
 
-/* ============================== App (Router) ============================== */
+/* ====== 6) App (Router + Supabase auth) ====== */
 function App(){
   const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
   const [err, setErr] = useState("");
@@ -268,42 +266,133 @@ function App(){
   const [signupForm, setSignupForm] = useState({
     fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true
   });
-  const [me, setMe] = useState(null);
+  const [me, setMe] = useState(null); // merged view: { id, email, full_name? }
 
+  // On first load: check current session + 30-day sliding window
   useEffect(()=>{
-    const s = loadSession();
-    if (!isSessionFresh(s)) { clearSession(); setRoute("login"); return; }
-    const user = getUserByEmail(s.email);
-    if (!user) { clearSession(); setRoute("login"); return; }
-    saveSession({ ...s, lastActive: Date.now() });
-    setMe(user); setRoute("dashboard");
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setRoute("login"); return; }
+
+      // Enforce sliding 30-day window (from last time user opened app)
+      if (!isWithinThirtyDays()) {
+        await supabase.auth.signOut();
+        localStorage.removeItem(LS_LAST_ACTIVE);
+        setRoute("login");
+        return;
+      }
+      bumpLastActive();
+
+      // Load profile
+      const user = session.user;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, opt_in")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
+      setRoute("dashboard");
+    })();
+
+    // Keep lastActive fresh whenever Supabase refreshes the session
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, _session) => {
+      if (_session) bumpLastActive();
+    });
+    return () => { sub.subscription.unsubscribe(); };
   },[]);
 
-  function handleLogin(e){
+  async function handleLogin(e){
     e.preventDefault(); setErr("");
-    const u = getUserByEmail(loginForm.email || "");
-    if (!u) return setErr("No account found for that email.");
-    if (u.passwordHash !== demoHash(loginForm.password)) return setErr("Incorrect password.");
-    saveSession({ email: u.email, lastActive: Date.now(), persistent: !!loginForm.stay });
-    setMe(u); setRoute("dashboard");
+    try {
+      const stay = !!loginForm.stay;
+      // Note: Supabase persistSession=true already uses localStorage.
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: (loginForm.email || "").trim(),
+        password: loginForm.password || "",
+      });
+      if (error) throw error;
+
+      // Sliding window: start counting from “now”
+      bumpLastActive();
+
+      // Load profile
+      const user = data.user;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, opt_in")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
+      setRoute("dashboard");
+
+      // (Optional) If user didn’t check “stay signed in”, we can simulate session-only by clearing
+      // the sliding window on tab close (best-effort). Real session shortening needs a server.
+      if (!stay) window.addEventListener("beforeunload", () => {
+        try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
+      }, { once: true });
+    } catch (e) {
+      console.error(e);
+      setErr(e.message || "Login failed.");
+    }
   }
 
-  function handleSignup(e){
+  async function handleSignup(e){
     e.preventDefault(); setErr("");
-    const { fullName, email, password, confirm, agree, optIn } = signupForm;
-    if (!fullName.trim()) return setErr("Please enter your full name.");
-    if (!/\S+@\S+\.\S+/.test(email)) return setErr("Please enter a valid email address.");
-    if (password.length < 8) return setErr("Password must be at least 8 characters.");
-    if (password !== confirm) return setErr("Passwords do not match.");
-    if (!agree) return setErr("You must agree to the Terms & Conditions.");
-    if (getUserByEmail(email)) return setErr("That email is already registered.");
-    const user = { fullName: fullName.trim(), email: email.trim(), passwordHash: demoHash(password), optIn: !!optIn, apps: [...defaultApps] };
-    upsertUser(user);
-    saveSession({ email: user.email, lastActive: Date.now(), persistent: true });
-    setMe(user); setRoute("dashboard");
+    try {
+      const { fullName, email, password, confirm, agree, optIn } = signupForm;
+      if (!fullName.trim()) throw new Error("Please enter your full name.");
+      if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
+      if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
+      if (password !== confirm) throw new Error("Passwords do not match.");
+      if (!agree) throw new Error("You must agree to the Terms & Conditions.");
+
+      // Supabase sign up
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim() } // stored in auth.users.user_metadata
+        }
+      });
+      if (error) throw error;
+
+      // Create profile row tied to auth user id
+      const user = data.user;
+      if (user) {
+        await supabase.from("profiles").upsert({
+          id: user.id,
+          full_name: fullName.trim(),
+          opt_in: !!optIn,
+        });
+      }
+
+      // Sliding window starts now
+      bumpLastActive();
+
+      // If your project has email confirmations enabled, user may need to confirm.
+      // For simplicity, go to dashboard if session exists; else, show a message.
+      const { data: sessionRes } = await supabase.auth.getSession();
+      if (!sessionRes.session) {
+        setErr("Check your inbox to confirm your email, then sign in.");
+        setRoute("login");
+        return;
+      }
+
+      setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
+      setRoute("dashboard");
+    } catch (e) {
+      console.error(e);
+      setErr(e.message || "Signup failed.");
+    }
   }
 
-  function handleLogout(){ clearSession(); setMe(null); setRoute("login"); }
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
+    setMe(null); setRoute("login");
+  }
 
   if (route === "loading") {
     return <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>Loading…</div>;
@@ -337,7 +426,7 @@ function App(){
   return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
 }
 
-/* -------------------- Mount -------------------- */
+/* ====== 7) Mount ====== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
   <ErrorBoundary>
     <App />
