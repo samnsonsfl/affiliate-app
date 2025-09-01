@@ -529,31 +529,67 @@ function App(){
   }
 
   async function handleSignup(e){
-    e.preventDefault(); setErr("");
-    try {
-      const { fullName, email, password, confirm, agree, optIn } = signupForm;
-      if (!fullName.trim()) throw new Error("Please enter your full name.");
-      if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
-      if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
-      if (password !== confirm) throw new Error("Passwords do not match.");
-      if (!agree) throw new Error("You must agree to the Terms & Conditions.");
+  e.preventDefault(); setErr("");
+  try {
+    const { fullName, email, password, confirm, agree, optIn } = signupForm;
+    if (!fullName.trim()) throw new Error("Please enter your full name.");
+    if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
+    if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
+    if (password !== confirm) throw new Error("Passwords do not match.");
+    if (!agree) throw new Error("You must agree to the Terms & Conditions.");
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { data: { full_name: fullName.trim() } }
+    // 1) Create auth user
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: { data: { full_name: fullName.trim() } }
+    });
+    if (error) throw error;
+
+    const user = data.user;
+
+    // 2) Create profile row
+    if (user) {
+      const { error: upsertErr } = await supabase.from("profiles").upsert({
+        id: user.id,
+        full_name: fullName.trim(),
+        opt_in: !!optIn,
       });
-      if (error) throw error;
+      if (upsertErr) console.warn("profiles upsert warning:", upsertErr.message);
+    }
 
-      const user = data.user;
-      if (user) {
-        const { error: upsertErr } = await supabase.from("profiles").upsert({
-          id: user.id,
-          full_name: fullName.trim(),
-          opt_in: !!optIn,
-        });
-        if (upsertErr) console.warn("profiles upsert warning:", upsertErr.message);
+    // 3) 👇 Grant the 5 default apps (Amazon, Expedia, Viator, Get Your Guide, Hellotickets)
+    if (user) {
+      const { data: defaults, error: defErr } = await supabase
+        .from("apps")
+        .select("id")
+        .eq("is_default", true);
+      if (!defErr && defaults?.length) {
+        // insert into user_apps for this user
+        await supabase.from("user_apps").insert(
+          defaults.map(a => ({ user_id: user.id, app_id: a.id }))
+        ).catch(() => {}); // ignore duplicates if any
       }
+    }
+
+    // 4) Start sliding window and finish
+    bumpLastActive();
+
+    // If email confirmations are enabled, there may be no session until they confirm:
+    const { data: s } = await supabase.auth.getSession();
+    if (!s.session) {
+      setErr("Check your email to confirm your account, then sign in.");
+      setRoute("login");
+      return;
+    }
+
+    setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
+    setRoute("dashboard");
+  } catch (e) {
+    console.error(e);
+    setErr(e.message || "Signup failed.");
+  }
+}
 
       bumpLastActive();
 
@@ -609,6 +645,21 @@ function App(){
     );
   }
   return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
+}
+
+// After successful signInWithPassword:
+const { data: countRows } = await supabase
+  .from("user_apps")
+  .select("app_id", { count: "exact", head: true })
+  .eq("user_id", data.user.id);
+
+if ((countRows?.length ?? 0) === 0) {
+  const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+  if (defaults?.length) {
+    await supabase.from("user_apps").insert(
+      defaults.map(a => ({ user_id: data.user.id, app_id: a.id }))
+    ).catch(() => {});
+  }
 }
 
 /* ================== Mount ================== */
