@@ -92,7 +92,6 @@ function ErrorNote({ children }) {
 function App(){
   const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
   const [err, setErr] = useState("");
-  // form state we sync via onInput (uncontrolled inputs keep focus stable)
   const [loginForm, setLoginForm] = useState({ email:"", password:"", stay:true });
   const [signupForm, setSignupForm] = useState({
     fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true
@@ -139,7 +138,7 @@ function App(){
 
   /* ---- Pages ---- */
 
-  // LOGIN — inputs are UNCONTROLLED (defaultValue + onInput) to eliminate focus drops
+  // LOGIN — controlled inputs with onChange (capture value in local first)
   const Login = () => (
     <Shell route={route} onLogout={handleLogout}>
       <div className="au-grid" style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -156,8 +155,8 @@ function App(){
                   className="au-input"
                   type="email"
                   placeholder="you@example.com"
-                  defaultValue={loginForm.email}
-                  onInput={(e)=>setLoginForm(s=>({...s, email:e.currentTarget.value}))}
+                  value={loginForm.email}
+                  onChange={(e)=>{ const v=e.target.value; setLoginForm(s=>({...s, email:v})); }}
                   autoComplete="email"
                   required
                 />
@@ -168,8 +167,8 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="••••••••"
-                  defaultValue={loginForm.password}
-                  onInput={(e)=>setLoginForm(s=>({...s, password:e.currentTarget.value}))}
+                  value={loginForm.password}
+                  onChange={(e)=>{ const v=e.target.value; setLoginForm(s=>({...s, password:v})); }}
                   autoComplete="current-password"
                   required
                 />
@@ -179,7 +178,7 @@ function App(){
                   <input
                     type="checkbox"
                     checked={loginForm.stay}
-                    onChange={(e)=>setLoginForm(s=>({...s, stay:e.target.checked}))}
+                    onChange={(e)=>{ const v=e.target.checked; setLoginForm(s=>({...s, stay:v})); }}
                   />
                   <span>Stay signed in for 30 days</span>
                 </label>
@@ -198,7 +197,7 @@ function App(){
     </Shell>
   );
 
-  // SIGNUP — inputs are UNCONTROLLED (defaultValue + onInput) to eliminate focus drops
+  // SIGNUP — controlled inputs with onChange (capture value in local first)
   const Signup = () => (
     <Shell route={route} onLogout={handleLogout}>
       <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -214,8 +213,8 @@ function App(){
                 <input
                   className="au-input"
                   placeholder="Jane Doe"
-                  defaultValue={signupForm.fullName}
-                  onInput={(e)=>setSignupForm(s=>({...s, fullName:e.currentTarget.value}))}
+                  value={signupForm.fullName}
+                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, fullName:v})); }}
                   autoComplete="name"
                 />
               </div>
@@ -225,8 +224,8 @@ function App(){
                   className="au-input"
                   type="email"
                   placeholder="you@example.com"
-                  defaultValue={signupForm.email}
-                  onInput={(e)=>setSignupForm(s=>({...s, email:e.currentTarget.value}))}
+                  value={signupForm.email}
+                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, email:v})); }}
                   autoComplete="email"
                 />
               </div>
@@ -236,8 +235,8 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="Min 8 characters"
-                  defaultValue={signupForm.password}
-                  onInput={(e)=>setSignupForm(s=>({...s, password:e.currentTarget.value}))}
+                  value={signupForm.password}
+                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, password:v})); }}
                   autoComplete="new-password"
                 />
               </div>
@@ -247,8 +246,8 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="Repeat password"
-                  defaultValue={signupForm.confirm}
-                  onInput={(e)=>setSignupForm(s=>({...s, confirm:e.currentTarget.value}))}
+                  value={signupForm.confirm}
+                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, confirm:v})); }}
                   autoComplete="new-password"
                 />
               </div>
@@ -256,7 +255,7 @@ function App(){
                 <input
                   type="checkbox"
                   checked={signupForm.agree}
-                  onChange={(e)=>setSignupForm(s=>({...s, agree:e.target.checked}))}
+                  onChange={(e)=>{ const v=e.target.checked; setSignupForm(s=>({...s, agree:v})); }}
                 />
                 <span>
                   I agree to the{" "}
@@ -267,7 +266,7 @@ function App(){
                 <input
                   type="checkbox"
                   checked={signupForm.optIn}
-                  onChange={(e)=>setSignupForm(s=>({...s, optIn:e.target.checked}))}
+                  onChange={(e)=>{ const v=e.target.checked; setSignupForm(s=>({...s, optIn:v})); }}
                 />
                 <span>Send me helpful updates and the occasional ✨ good spam ✨</span>
               </div>
@@ -313,9 +312,7 @@ function App(){
                   <div className="au-note">{app.desc}</div>
                 </div>
                 <div className="au-card-footer au-row" style={{ gap: 12 }}>
-                  <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>
-                    Open
-                  </button>
+                  <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
                   <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
                 </div>
               </div>
@@ -355,4 +352,3 @@ ReactDOM.createRoot(document.getElementById("auth-root")).render(
     <App />
   </ErrorBoundary>
 );
-
