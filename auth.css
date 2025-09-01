@@ -1,0 +1,86 @@
+/* Dark gradient background + white text, minimal utility classes */
+:root {
+  --bg1: #0b1220;
+  --bg2: #0e172a;
+  --panel: rgba(255,255,255,0.06);
+  --panel-border: rgba(255,255,255,0.12);
+  --muted: rgba(255,255,255,0.85);
+  --muted2: rgba(255,255,255,0.7);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  color: #fff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+.au-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.au-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 32px;
+}
+
+.au-brand { display:flex; align-items:center; gap:12px; }
+.au-logo {
+  width:44px; height:44px; display:grid; place-items:center;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  font-size: 22px;
+}
+
+.au-card {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.au-card > .au-card-header { padding: 20px 20px 0; }
+.au-card > .au-card-content { padding: 16px 20px; }
+.au-card > .au-card-footer { padding: 0 20px 16px; }
+
+.au-grid { display:grid; gap: 20px; }
+@media (min-width: 640px) { .au-grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (min-width: 1024px) { .au-grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+.au-input, .au-btn {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.au-input {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.10);
+  color: #fff;
+}
+.au-input::placeholder { color: rgba(255,255,255,.6); }
+.au-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
+
+.au-row { display:flex; gap: 12px; align-items:center; }
+.au-row-between { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+.au-btn { border: 1px solid rgba(255,255,255,.25); cursor:pointer; }
+.au-btn-primary { background: #fff; color:#111827; border-color:#fff; }
+.au-btn-secondary { background: rgba(255,255,255,.15); color:#fff; }
+
+.au-badge {
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:999px;
+  padding:2px 8px; font-size:12px;
+}
+
+.au-note { color: var(--muted2); font-size: 12px; }
+.au-subtle { color: var(--muted); }
