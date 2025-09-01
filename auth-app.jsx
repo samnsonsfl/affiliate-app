@@ -1,9 +1,10 @@
 /* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day) */
+/* global React, ReactDOM, window */
 const { useState, useEffect, useMemo, Component } = React;
 
-/* ================== Supabase config (fill your anon key) ================== */
+/* ================== Supabase config ================== */
 const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ"; // ← from Settings → API
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
 
 if (!window.supabase) {
   console.error("Supabase client script missing. Add @supabase/supabase-js@2 before this file.");
@@ -32,10 +33,9 @@ class ErrorBoundary extends Component {
   }
 }
 
-/* ================== Sliding 30-day helpers (lastActive) ================== */
+/* ================== Sliding 30-day helpers ================== */
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const LS_LAST_ACTIVE = "appsUnited.lastActive";
-
 function getLastActive(){ try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); } catch { return 0; } }
 function bumpLastActive(){ try { localStorage.setItem(LS_LAST_ACTIVE, String(Date.now())); } catch {} }
 function isWithinThirtyDays(){
@@ -44,7 +44,7 @@ function isWithinThirtyDays(){
   return (Date.now() - last) < THIRTY_DAYS;
 }
 
-/* ================== Starter apps (unchanged) ================== */
+/* ================== Placeholder apps (visual only) ================== */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
   { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
@@ -52,33 +52,7 @@ const defaultApps = [
   { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
 ];
 
-/* ---------- Dashboard prefs (grid + folders) ---------- */
-const LS_PREFS = "appsUnited.prefs";
-
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; }
-}
-function savePrefs(p) {
-  try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
-}
-
-/* Shape:
-{
-  grid: "5" | "4",
-  folders: [{ id, name }],
-  appFolders: { [appId]: folderId }   // app → folder mapping
-}
-*/
-function ensurePrefsShape(p) {
-  return {
-    grid: p.grid === "4" ? "4" : "5",
-    folders: Array.isArray(p.folders) ? p.folders : [],
-    appFolders: p.appFolders && typeof p.appFolders === "object" ? p.appFolders : {}
-  };
-}
-function uid() { return Math.random().toString(36).slice(2, 8); }
-
-/* ================== Shell & small UI (unchanged visuals) ================== */
+/* ================== Shell UI (keeps your look) ================== */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container" data-route={route}>
@@ -90,14 +64,12 @@ function Shell({ route, onLogout, children }) {
             <div className="au-note">All your apps, your way.</div>
           </div>
         </div>
-
         {route === "dashboard" && (
           <button className="au-btn au-btn-secondary au-logout" onClick={onLogout}>
             Logout
           </button>
         )}
       </header>
-
       {children}
     </div>
   );
@@ -113,7 +85,7 @@ function ErrorNote({ children }) {
   );
 }
 
-/* ================== TOP-LEVEL PAGES (stable identity) ================== */
+/* ================== Pages ================== */
 function LoginPage({ err, form, setForm, onSubmit, goSignup, route, onLogout }) {
   return (
     <Shell route={route} onLogout={onLogout}>
@@ -155,9 +127,6 @@ function LoginPage({ err, form, setForm, onSubmit, goSignup, route, onLogout }) 
               </div>
               <button type="submit" className="au-btn au-btn-primary">Sign in</button>
             </form>
-          </div>
-          <div className="au-card-footer">
-            <p className="au-note" style={{ textAlign: "center" }}>By signing in you agree to our Terms & Privacy.</p>
           </div>
         </div>
       </div>
@@ -232,9 +201,6 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
               </div>
             </form>
           </div>
-          <div className="au-card-footer">
-            <p className="au-note" style={{ textAlign: "center" }}>We respect your inbox. Unsubscribe anytime.</p>
-          </div>
         </div>
       </div>
     </Shell>
@@ -242,207 +208,26 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
 }
 
 function DashboardPage({ me, route, onLogout }) {
-  // apps source
   const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
-
-  // prefs state
-  const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
-  const [search, setSearch] = React.useState("");
-  const [activeFolder, setActiveFolder] = React.useState("all"); // "all" | folderId
-  const [newFolderName, setNewFolderName] = React.useState("");
-
-  // persist prefs
-  useEffect(()=> { savePrefs(prefs); }, [prefs]);
-
-  const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
-
-  // derived lists
-  const folders = prefs.folders;
-  const appFolders = prefs.appFolders;
-
-  // filter by folder
-  const appsInView = apps.filter(a => {
-    if (activeFolder === "all") return true;
-    return appFolders[a.id] === activeFolder;
-  });
-
-  // search filter (case-insensitive, name + desc)
-  const s = search.trim().toLowerCase();
-  const filteredApps = !s ? appsInView : appsInView.filter(a =>
-    a.name.toLowerCase().includes(s) || (a.desc||"").toLowerCase().includes(s)
-  );
-
-  // actions
-  function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
-
-  function addFolder() {
-    const name = newFolderName.trim();
-    if (!name) return;
-    const id = uid();
-    setPrefs(p => ({ ...p, folders: [...p.folders, { id, name }] }));
-    setNewFolderName("");
-    setActiveFolder(id);
-  }
-
-  function renameFolder(id, name) {
-    setPrefs(p => ({
-      ...p,
-      folders: p.folders.map(f => f.id === id ? { ...f, name: name.trim() || f.name } : f)
-    }));
-  }
-
-  function deleteFolder(id) {
-    // remove folder and unassign apps that were in it
-    setPrefs(p => {
-      const nextFolders = p.folders.filter(f => f.id !== id);
-      const nextMap = { ...p.appFolders };
-      for (const k of Object.keys(nextMap)) {
-        if (nextMap[k] === id) delete nextMap[k];
-      }
-      return { ...p, folders: nextFolders, appFolders: nextMap };
-    });
-    if (activeFolder === id) setActiveFolder("all");
-  }
-
-  function assignAppToFolder(appId, folderId) {
-    setPrefs(p => {
-      const next = { ...p.appFolders };
-      if (folderId === "none") delete next[appId];
-      else next[appId] = folderId;
-      return { ...p, appFolders: next };
-    });
-  }
-
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
-        {/* Greeting */}
         <div>
           <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-            Welcome{firstName ? `, ${firstName}` : ""} 👋
+            Welcome{me?.full_name ? `, ${me.full_name.split(" ")[0]}` : ""} 👋
           </h2>
           <div className="au-note">Your starter apps are ready. Add more soon.</div>
         </div>
-
-        {/* Controls row */}
-        <div className="au-card" style={{ padding: 12 }}>
-          <div className="au-controls">
-            {/* Folder filter */}
-            <div className="au-controls__group">
-              <label className="au-note">Folder</label>
-              <select
-                className="au-input au-select"
-                value={activeFolder}
-                onChange={(e)=>setActiveFolder(e.target.value)}
-              >
-                <option value="all">All</option>
-                {folders.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Size switcher */}
-            <div className="au-controls__group">
-              <label className="au-note">Size</label>
-              <div className="au-seg">
-                <button
-                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
-                  onClick={()=>setGrid("5")}
-                  title="5 cards across"
-                >5x♾️</button>
-                <button
-                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
-                  onClick={()=>setGrid("4")}
-                  title="4 cards across"
-                >4x♾️</button>
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="au-controls__group au-controls__grow">
-              <label className="au-note">Search</label>
-              <input
-                className="au-input"
-                placeholder="Find an app…"
-                value={search}
-                onChange={(e)=>setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Folders manager */}
-        <div className="au-card" style={{ padding: 14 }}>
-          <div className="au-row-between" style={{ alignItems:"flex-start" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {folders.length === 0 ? (
-                <div className="au-note">No folders yet.</div>
-              ) : (
-                folders.map(f => (
-                  <div key={f.id} className="au-folderchip">
-                    <input
-                      className="au-folderchip__name"
-                      value={f.name}
-                      onChange={(e)=>renameFolder(f.id, e.target.value)}
-                    />
-                    <button className="au-folderchip__x" onClick={()=>deleteFolder(f.id)} title="Delete">×</button>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="au-row" style={{ gap:8 }}>
-              <input
-                className="au-input"
-                placeholder="New folder name"
-                value={newFolderName}
-                onChange={(e)=>setNewFolderName(e.target.value)}
-                style={{ width: 220 }}
-              />
-              <button className="au-btn au-btn-primary" onClick={addFolder}>Add Folder</button>
-            </div>
-          </div>
-          <div className="au-note" style={{ marginTop: 8 }}>
-            Tip: assign any app to a folder using the dropdown on its card.
-          </div>
-        </div>
-
-        {/* Apps grid */}
-        <div className={`au-grid apps-grid ${prefs.grid === "4" ? "apps-grid--4" : "apps-grid--5"}`}>
-          {filteredApps.map(app => (
+        <div className="au-grid au-grid-3">
+          {apps.map(app => (
             <div key={app.id} className="au-card">
-              <div className="au-card-header">
-                <div className="au-row-between" style={{ alignItems:"center" }}>
-                  <div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div>
-                  <div className="au-row" style={{ gap:8 }}>
-                    {app.badge && <span className="au-badge">{app.badge}</span>}
-                    {/* Folder selector per app */}
-                    <select
-                      className="au-input au-select au-select--mini"
-                      value={appFolders[app.id] || "none"}
-                      onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
-                      title="Move to folder"
-                    >
-                      <option value="none">No folder</option>
-                      {folders.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div className="au-card-content">
-                <div className="au-note">{app.desc}</div>
-              </div>
+              <div className="au-card-header"><div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div></div>
+              <div className="au-card-content"><div className="au-note">{app.desc}</div></div>
               <div className="au-card-footer au-row" style={{ gap: 12 }}>
-                <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
-                <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
+                <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name}`)}>Open</button>
               </div>
             </div>
           ))}
-          {filteredApps.length === 0 && (
-            <div className="au-note" style={{ padding:12 }}>No apps match your search or folder.</div>
-          )}
         </div>
       </div>
     </Shell>
@@ -451,21 +236,17 @@ function DashboardPage({ me, route, onLogout }) {
 
 /* ================== App (Router + Supabase Auth) ================== */
 function App(){
-  const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
+  const [route, setRoute] = useState("loading");
   const [err, setErr] = useState("");
   const [loginForm, setLoginForm] = useState({ email:"", password:"", stay:true });
-  const [signupForm, setSignupForm] = useState({
-    fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true
-  });
-  const [me, setMe] = useState(null); // { id, email, full_name }
+  const [signupForm, setSignupForm] = useState({ fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true });
+  const [me, setMe] = useState(null);
 
-  // Initial session check + sliding window
   useEffect(()=>{
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setRoute("login"); return; }
 
-      // enforce sliding 30-day window
       if (!isWithinThirtyDays()) {
         await supabase.auth.signOut();
         try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
@@ -474,20 +255,17 @@ function App(){
       }
       bumpLastActive();
 
-      // load profile
       const user = session.user;
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
-      if (error) console.warn("profiles fetch warning:", error.message);
 
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
     })();
 
-    // keep lastActive fresh when Supabase refreshes tokens
     const { data: sub } = supabase.auth.onAuthStateChange((_event, _session) => {
       if (_session) bumpLastActive();
     });
@@ -502,11 +280,22 @@ function App(){
         password: loginForm.password || "",
       });
       if (error) throw error;
-
-      bumpLastActive(); // start 30-day window from now
-
-      // fetch profile
       const user = data.user;
+
+      // Grant defaults if none exist
+      const { data: rows } = await supabase
+        .from("user_apps")
+        .select("app_id")
+        .eq("user_id", user.id);
+      if (!rows || rows.length === 0) {
+        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+        if (defaults?.length) {
+          await supabase.from("user_apps").insert(defaults.map(a => ({ user_id: user.id, app_id: a.id }))).catch(()=>{});
+        }
+      }
+
+      bumpLastActive();
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
@@ -516,11 +305,8 @@ function App(){
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
 
-      // If user unchecked “stay signed in”, clear window on tab close (best-effort)
       if (!loginForm.stay) {
-        window.addEventListener("beforeunload", () => {
-          try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
-        }, { once: true });
+        window.addEventListener("beforeunload", () => { try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {} }, { once: true });
       }
     } catch (e) {
       console.error(e);
@@ -529,71 +315,33 @@ function App(){
   }
 
   async function handleSignup(e){
-  e.preventDefault(); setErr("");
-  try {
-    const { fullName, email, password, confirm, agree, optIn } = signupForm;
-    if (!fullName.trim()) throw new Error("Please enter your full name.");
-    if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
-    if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
-    if (password !== confirm) throw new Error("Passwords do not match.");
-    if (!agree) throw new Error("You must agree to the Terms & Conditions.");
+    e.preventDefault(); setErr("");
+    try {
+      const { fullName, email, password, confirm, agree, optIn } = signupForm;
+      if (!fullName.trim()) throw new Error("Please enter your full name.");
+      if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
+      if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
+      if (password !== confirm) throw new Error("Passwords do not match.");
+      if (!agree) throw new Error("You must agree to the Terms & Conditions.");
 
-    // 1) Create auth user
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { data: { full_name: fullName.trim() } }
-    });
-    if (error) throw error;
-
-    const user = data.user;
-
-    // 2) Create profile row
-    if (user) {
-      const { error: upsertErr } = await supabase.from("profiles").upsert({
-        id: user.id,
-        full_name: fullName.trim(),
-        opt_in: !!optIn,
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { full_name: fullName.trim() } }
       });
-      if (upsertErr) console.warn("profiles upsert warning:", upsertErr.message);
-    }
+      if (error) throw error;
+      const user = data.user;
 
-    // 3) 👇 Grant the 5 default apps (Amazon, Expedia, Viator, Get Your Guide, Hellotickets)
-    if (user) {
-      const { data: defaults, error: defErr } = await supabase
-        .from("apps")
-        .select("id")
-        .eq("is_default", true);
-      if (!defErr && defaults?.length) {
-        // insert into user_apps for this user
-        await supabase.from("user_apps").insert(
-          defaults.map(a => ({ user_id: user.id, app_id: a.id }))
-        ).catch(() => {}); // ignore duplicates if any
+      if (user) {
+        await supabase.from("profiles").upsert({ id: user.id, full_name: fullName.trim(), opt_in: !!optIn });
+        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+        if (defaults?.length) {
+          await supabase.from("user_apps").insert(defaults.map(a => ({ user_id: user.id, app_id: a.id }))).catch(()=>{});
+        }
       }
-    }
-
-    // 4) Start sliding window and finish
-    bumpLastActive();
-
-    // If email confirmations are enabled, there may be no session until they confirm:
-    const { data: s } = await supabase.auth.getSession();
-    if (!s.session) {
-      setErr("Check your email to confirm your account, then sign in.");
-      setRoute("login");
-      return;
-    }
-
-    setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
-    setRoute("dashboard");
-  } catch (e) {
-    console.error(e);
-    setErr(e.message || "Signup failed.");
-  }
-}
 
       bumpLastActive();
 
-      // If email confirmations are enabled, there may be no session until they confirm:
       const { data: s } = await supabase.auth.getSession();
       if (!s.session) {
         setErr("Check your email to confirm your account, then sign in.");
@@ -615,51 +363,16 @@ function App(){
     setMe(null); setRoute("login");
   }
 
-  if (route === "loading") {
+  if (route === "loading")
     return <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>Loading…</div>;
-  }
-  if (route === "login") {
-    return (
-      <LoginPage
-        err={err}
-        form={loginForm}
-        setForm={setLoginForm}
-        onSubmit={handleLogin}
-        goSignup={()=>{ setErr(""); setRoute("signup"); }}
-        route={route}
-        onLogout={handleLogout}
-      />
-    );
-  }
-  if (route === "signup") {
-    return (
-      <SignupPage
-        err={err}
-        form={signupForm}
-        setForm={setSignupForm}
-        onSubmit={handleSignup}
-        goLogin={()=>{ setErr(""); setRoute("login"); }}
-        route={route}
-        onLogout={handleLogout}
-      />
-    );
-  }
+
+  if (route === "login")
+    return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={handleLogout} />;
+
+  if (route === "signup")
+    return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
+
   return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
-}
-
-// After successful signInWithPassword:
-const { data: countRows } = await supabase
-  .from("user_apps")
-  .select("app_id", { count: "exact", head: true })
-  .eq("user_id", data.user.id);
-
-if ((countRows?.length ?? 0) === 0) {
-  const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
-  if (defaults?.length) {
-    await supabase.from("user_apps").insert(
-      defaults.map(a => ({ user_id: data.user.id, app_id: a.id }))
-    ).catch(() => {});
-  }
 }
 
 /* ================== Mount ================== */
