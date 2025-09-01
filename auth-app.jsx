@@ -1,7 +1,7 @@
 /* auth-app.jsx — Apps-United login, signup, and dashboard (CDN React, no build) */
 const { useState, useEffect, useMemo, Component } = React;
 
-/* -------------------- Error Boundary (no more blank screen) -------------------- */
+/* -------------------- Error Boundary -------------------- */
 class ErrorBoundary extends Component {
   constructor(props){ super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error){ return { error }; }
@@ -12,7 +12,7 @@ class ErrorBoundary extends Component {
         <div className="au-container" style={{paddingTop:40}}>
           <div className="au-card" style={{padding:16, borderColor:"rgba(248,113,113,.5)", background:"rgba(248,113,113,.12)"}}>
             <h2 style={{margin:"6px 0 8px", fontWeight:700}}>Something went wrong</h2>
-            <div className="au-note">Check the browser console for details.</div>
+            <div className="au-note">Open your browser console to see details.</div>
           </div>
         </div>
       );
@@ -48,7 +48,7 @@ function isSessionFresh(s, now=Date.now()){
   return s.persistent && (now - (s.lastActive || 0)) < THIRTY_DAYS;
 }
 
-/* -------------------- Starter apps (placeholder actions) -------------------- */
+/* -------------------- Starter apps -------------------- */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
   { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
@@ -92,6 +92,7 @@ function ErrorNote({ children }) {
 function App(){
   const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
   const [err, setErr] = useState("");
+  // form state we sync via onInput (uncontrolled inputs keep focus stable)
   const [loginForm, setLoginForm] = useState({ email:"", password:"", stay:true });
   const [signupForm, setSignupForm] = useState({
     fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true
@@ -137,6 +138,8 @@ function App(){
   function handleLogout(){ clearSession(); setMe(null); setRoute("login"); }
 
   /* ---- Pages ---- */
+
+  // LOGIN — inputs are UNCONTROLLED (defaultValue + onInput) to eliminate focus drops
   const Login = () => (
     <Shell route={route} onLogout={handleLogout}>
       <div className="au-grid" style={{ maxWidth: 520, margin: "0 auto" }}>
@@ -153,8 +156,9 @@ function App(){
                   className="au-input"
                   type="email"
                   placeholder="you@example.com"
-                  value={loginForm.email}
-                  onChange={(e)=>setLoginForm(s=>({...s, email:e.target.value}))}
+                  defaultValue={loginForm.email}
+                  onInput={(e)=>setLoginForm(s=>({...s, email:e.currentTarget.value}))}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -164,8 +168,9 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="••••••••"
-                  value={loginForm.password}
-                  onChange={(e)=>setLoginForm(s=>({...s, password:e.target.value}))}
+                  defaultValue={loginForm.password}
+                  onInput={(e)=>setLoginForm(s=>({...s, password:e.currentTarget.value}))}
+                  autoComplete="current-password"
                   required
                 />
               </div>
@@ -193,6 +198,7 @@ function App(){
     </Shell>
   );
 
+  // SIGNUP — inputs are UNCONTROLLED (defaultValue + onInput) to eliminate focus drops
   const Signup = () => (
     <Shell route={route} onLogout={handleLogout}>
       <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -203,14 +209,13 @@ function App(){
           <div className="au-card-content">
             {err && <ErrorNote>{err}</ErrorNote>}
             <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
-              {/* Controlled inputs — focus safe because components no longer remount */}
               <div style={{ gridColumn: "1 / -1" }}>
                 <label className="au-note">Full name</label>
                 <input
                   className="au-input"
                   placeholder="Jane Doe"
-                  value={signupForm.fullName}
-                  onChange={(e)=>setSignupForm(s=>({...s, fullName:e.target.value}))}
+                  defaultValue={signupForm.fullName}
+                  onInput={(e)=>setSignupForm(s=>({...s, fullName:e.currentTarget.value}))}
                   autoComplete="name"
                 />
               </div>
@@ -220,8 +225,8 @@ function App(){
                   className="au-input"
                   type="email"
                   placeholder="you@example.com"
-                  value={signupForm.email}
-                  onChange={(e)=>setSignupForm(s=>({...s, email:e.target.value}))}
+                  defaultValue={signupForm.email}
+                  onInput={(e)=>setSignupForm(s=>({...s, email:e.currentTarget.value}))}
                   autoComplete="email"
                 />
               </div>
@@ -231,8 +236,8 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="Min 8 characters"
-                  value={signupForm.password}
-                  onChange={(e)=>setSignupForm(s=>({...s, password:e.target.value}))}
+                  defaultValue={signupForm.password}
+                  onInput={(e)=>setSignupForm(s=>({...s, password:e.currentTarget.value}))}
                   autoComplete="new-password"
                 />
               </div>
@@ -242,8 +247,8 @@ function App(){
                   className="au-input"
                   type="password"
                   placeholder="Repeat password"
-                  value={signupForm.confirm}
-                  onChange={(e)=>setSignupForm(s=>({...s, confirm:e.target.value}))}
+                  defaultValue={signupForm.confirm}
+                  onInput={(e)=>setSignupForm(s=>({...s, confirm:e.currentTarget.value}))}
                   autoComplete="new-password"
                 />
               </div>
@@ -282,6 +287,7 @@ function App(){
     </Shell>
   );
 
+  // DASHBOARD
   const Dashboard = () => {
     const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
     return (
@@ -307,8 +313,9 @@ function App(){
                   <div className="au-note">{app.desc}</div>
                 </div>
                 <div className="au-card-footer au-row" style={{ gap: 12 }}>
-                  {/* Button instead of <a href="#"> to avoid any accidental navigation */}
-                  <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
+                  <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>
+                    Open
+                  </button>
                   <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
                 </div>
               </div>
@@ -329,6 +336,7 @@ function App(){
     );
   };
 
+  // ROUTER
   if (route === "loading") {
     return (
       <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>
@@ -341,9 +349,10 @@ function App(){
   return <Dashboard />;
 }
 
-/* -------------------- Mount with Error Boundary -------------------- */
+/* -------------------- Mount -------------------- */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
 );
+
