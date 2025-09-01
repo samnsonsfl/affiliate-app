@@ -55,7 +55,8 @@ const defaultApps = [
 /* ================== Shell & small UI (unchanged visuals) ================== */
 function Shell({ route, onLogout, children }) {
   return (
-    <div className="au-container">
+    <div className="au-container" data-route={route}>
+      {/* ...rest unchanged... */}
       <header className="au-header" style={{ alignItems: "flex-start" }}>
         <div className="au-brand" style={{flexDirection:"column", alignItems:"center", textAlign:"center"}}>
           <img src="./favicon-192.png" alt="Apps-United logo" style={{width:64, height:64, borderRadius:16}} />
