@@ -1,34 +1,176 @@
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f6f7fb;
-  text-align: center;
+/* ============= Apps-United Polished Theme ============= */
+
+/* Color system (dark, high-contrast, white text) */
+:root{
+  --bg-1: #0b1220;           /* deep navy */
+  --bg-2: #0f172a;           /* slate-900 */
+  --bg-3: #111827;           /* gray-900 */
+  --glass: rgba(255,255,255,0.06);
+  --glass-strong: rgba(255,255,255,0.10);
+  --border: rgba(255,255,255,0.12);
+  --white: #fff;
+  --muted: rgba(255,255,255,0.75);
+  --muted-2: rgba(255,255,255,0.55);
+  --brand-1: #60a5fa;        /* primary */
+  --brand-2: #34d399;        /* accent */
+  --danger: #f87171;
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
-header {
-  padding: 20px;
-  background: #2563eb;
-  color: #fff;
+/* Page backgrounds (subtle gradient that shifts on route) */
+.au-container{
+  min-height: 100vh;
+  color: var(--white);
+  background:
+    radial-gradient(1200px 800px at 10% -10%, rgba(52,211,153,.18), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, rgba(96,165,250,.18), transparent 50%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-2) 35%, var(--bg-3));
+  padding: 28px 18px 48px;
 }
 
-#catalog {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  justify-content: center;
-  padding: 20px;
+/* Slightly different hue on Signup (via data-route) */
+.au-container[data-route="signup"]{
+  background:
+    radial-gradient(1200px 800px at -10% 0%, rgba(96,165,250,.20), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, rgba(52,211,153,.16), transparent 50%),
+    linear-gradient(180deg, #0b1526, #0f1930 35%, #0f172a);
 }
 
-.tile {
-  background: #fff;
-  padding: 10px;
-  border-radius: 12px;
-  width: 120px;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,.1);
-  transition: transform 0.2s;
+/* Header */
+.au-header{
+  display:flex; justify-content:space-between; align-items:center;
+  max-width:1100px; margin:0 auto 28px; padding:6px 10px;
+}
+.au-brand{
+  display:flex; gap:12px; align-items:center;
+}
+.au-subtle{ color:var(--white); opacity:0.95; letter-spacing:.2px; }
+.au-note{ color:var(--muted); font-size:0.95rem; }
+
+/* Grid helpers (unchanged layout, nicer gaps) */
+.au-grid{ display:grid; gap:18px; }
+.au-grid-3{ grid-template-columns: repeat(1, minmax(0,1fr)); }
+@media (min-width: 640px){ .au-grid-3{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (min-width: 1024px){ .au-grid-3{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+.au-row{ display:flex; align-items:center; gap:10px; }
+.au-row-between{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+/* Cards (glassmorphism + soft hover) */
+.au-card{
+  background: var(--glass);
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+  overflow:hidden;
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+.au-card:hover{ transform: translateY(-2px); background: var(--glass-strong); border-color: rgba(255,255,255,0.18); }
+
+.au-card-header{ padding:18px 18px 8px; }
+.au-card-content{ padding: 0 18px 18px; }
+.au-card-footer{ padding: 12px 18px 18px; border-top:1px dashed rgba(255,255,255,0.08); }
+
+.au-badge{
+  font-size: 11px; padding: 4px 8px; border-radius: 999px;
+  border:1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: var(--muted);
 }
 
-.tile:hover {
-  transform: scale(1.05);
+/* Inputs — crisp borders, large hit area, strong focus ring */
+.au-input{
+  width:100%;
+  background: rgba(255,255,255,0.05);
+  color: var(--white);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:1rem;
+  line-height:1.2;
+  outline:none;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.au-input::placeholder{ color: var(--muted-2); }
+.au-input:focus{
+  border-color: rgba(96,165,250,.9);
+  box-shadow: 0 0 0 3px rgba(96,165,250,.25);
+  background: rgba(255,255,255,0.08);
+}
+
+/* Checkbox alignment & visibility on dark */
+input[type="checkbox"]{
+  width:18px; height:18px; accent-color: var(--brand-1);
+  border-radius:4px; cursor:pointer;
+}
+
+/* Buttons — primary & secondary with soft glow */
+.au-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:8px; padding:10px 14px; border-radius:12px; border:1px solid transparent;
+  font-weight:600; text-decoration:none; cursor:pointer; user-select:none;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
+  white-space:nowrap;
+}
+.au-btn:active{ transform: translateY(1px); }
+
+.au-btn-primary{
+  background: linear-gradient(180deg, #69adff, #4f8fe7);
+  color: #0b1220;
+  border-color: rgba(255,255,255,0.0);
+  box-shadow: 0 6px 18px rgba(96,165,250,.35);
+}
+.au-btn-primary:hover{
+  background: linear-gradient(180deg, #7bb7ff, #5a9af0);
+  box-shadow: 0 8px 22px rgba(96,165,250,.45);
+}
+
+.au-btn-secondary{
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
+  border-color: rgba(255,255,255,0.18);
+}
+.au-btn-secondary:hover{
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.28);
+}
+
+/* Error note */
+.au-card[style*="f87171"], .au-error{
+  border-color: rgba(248,113,113,.5) !important;
+  background: rgba(248,113,113,.12) !important;
+  color: var(--white);
+}
+
+/* Titles & text */
+h1,h2,h3,h4,h5,h6{ color: var(--white); letter-spacing:.2px; }
+label{ color: var(--muted); font-size: .95rem; }
+p{ color: var(--muted); }
+
+/* Accessibility: focus-visible outlines for keyboard users */
+:focus-visible{
+  outline: 3px solid rgba(96,165,250,.4);
+  outline-offset: 2px;
+}
+
+/* Smooth fade on page mount */
+@media (prefers-reduced-motion: no-preference){
+  .au-container{ animation: fadeUp .35s ease both; }
+  .au-card{ animation: popIn .25s ease both; }
+}
+@keyframes fadeUp{
+  from{ opacity:0; transform: translateY(8px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+@keyframes popIn{
+  from{ opacity:0; transform: translateY(6px) scale(.98); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+
+/* Make small screens comfy */
+@media (max-width: 420px){
+  .au-header{ margin-bottom: 18px; }
+  .au-card{ border-radius: 14px; }
+  .au-btn{ width: 100%; }
 }
