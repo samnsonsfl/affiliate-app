@@ -211,39 +211,56 @@ function App() {
     </Shell>
   );
 
-  const Signup = () => (
-    <Shell route={route} onLogout={handleLogout}>
-      <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div className="au-card">
-          <div className="au-card-header">
-            <h2 style={{ margin: 0, fontWeight: 600 }}>Create your account</h2>
-          </div>
-          <div className="au-card-content">
-            {err && <ErrorNote>{err}</ErrorNote>}
-            <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label className="au-note">Full name</label>
-                <input
-                  className="au-input"
-                  placeholder="Jane Doe"
-                  value={signupForm.fullName}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, fullName: e.target.value })
-                  }
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label className="au-note">Email</label>
-                <input
-                  className="au-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={signupForm.email}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, email: e.target.value })
-                  }
-                />
-              </div>
+  <div style={{ gridColumn: "1 / -1" }}>
+  <label className="au-note">Full name</label>
+  <input
+    className="au-input"
+    placeholder="Jane Doe"
+    value={signupForm.fullName}
+    onChange={(e) =>
+      setSignupForm({ ...signupForm, fullName: e.target.value })
+    }
+  />
+</div>
+
+<div style={{ gridColumn: "1 / -1" }}>
+  <label className="au-note">Email</label>
+  <input
+    className="au-input"
+    type="email"
+    placeholder="you@example.com"
+    value={signupForm.email}
+    onChange={(e) =>
+      setSignupForm({ ...signupForm, email: e.target.value })
+    }
+  />
+</div>
+
+<div>
+  <label className="au-note">Password</label>
+  <input
+    className="au-input"
+    type="password"
+    placeholder="Min 8 characters"
+    value={signupForm.password}
+    onChange={(e) =>
+      setSignupForm({ ...signupForm, password: e.target.value })
+    }
+  />
+</div>
+
+<div>
+  <label className="au-note">Confirm password</label>
+  <input
+    className="au-input"
+    type="password"
+    placeholder="Repeat password"
+    value={signupForm.confirm}
+    onChange={(e) =>
+      setSignupForm({ ...signupForm, confirm: e.target.value })
+    }
+  />
+</div>
               <div>
                 <label className="au-note">Password</label>
                 <input
