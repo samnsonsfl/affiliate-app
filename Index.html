@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Uzbekistan Blog</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    #musicToggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      z-index: 9999;
+      transition: background 0.3s;
+    }
+
+    #musicToggle:hover {
+      background: rgba(0,0,0,0.9);
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to My Uzbekistan Blog</h1>
+  <p>Enjoy reading while listening to traditional Uzbek-inspired music in the background.</p>
+
+  <!-- Hidden YouTube background music -->
+  <iframe 
+    id="musicPlayer"
+    width="0" height="0"
+    src="https://www.youtube.com/embed/w0Xf89MreA0?enablejsapi=1&autoplay=1&loop=1&playlist=w0Xf89MreA0&mute=1"
+    frameborder="0"
+    allow="autoplay">
+  </iframe>
+
+  <!-- Music toggle button -->
+  <button id="musicToggle">🎵</button>
+
+  <script>
+    // Load YouTube IFrame API
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    var player;
+    var isMuted = true;
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('musicPlayer', {
+        events: {
+          'onReady': onPlayerReady
+        }
+      });
+    }
+
+    function onPlayerReady(event) {
+      // Start muted
+      event.target.playVideo();
+
+      // Unmute + fade when user interacts
+      let unmute = () => {
+        if (isMuted) {
+          player.unMute();
+          let vol = 0;
+          let fade = setInterval(() => {
+            if (vol < 100) {
+              vol += 5;
+              player.setVolume(vol);
+            } else {
+              clearInterval(fade);
+            }
+          }, 200);
+          isMuted = false;
+        }
+        window.removeEventListener('click', unmute);
+        window.removeEventListener('scroll', unmute);
+      };
+
+      window.addEventListener('click', unmute);
+      window.addEventListener('scroll', unmute);
+
+      // Toggle button
+      document.getElementById("musicToggle").addEventListener("click", () => {
+        if (isMuted) {
+          player.unMute();
+          player.setVolume(70);
+          isMuted = false;
+        } else {
+          player.mute();
+          isMuted = true;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
