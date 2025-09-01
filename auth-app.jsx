@@ -56,7 +56,6 @@ const defaultApps = [
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container" data-route={route}>
-      {/* ...rest unchanged... */}
       <header className="au-header" style={{ alignItems: "flex-start" }}>
         <div className="au-brand" style={{flexDirection:"column", alignItems:"center", textAlign:"center"}}>
           <img src="./favicon-192.png" alt="Apps-United logo" style={{width:64, height:64, borderRadius:16}} />
@@ -65,10 +64,14 @@ function Shell({ route, onLogout, children }) {
             <div className="au-note">All your apps, your way.</div>
           </div>
         </div>
+
         {route === "dashboard" && (
-          <button className="au-btn au-btn-secondary" onClick={onLogout}>Logout</button>
+          <button className="au-btn au-btn-secondary au-logout" onClick={onLogout}>
+            Logout
+          </button>
         )}
       </header>
+
       {children}
     </div>
   );
