@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United login, signup, and dashboard (no build; CDN React) */
+/* auth-app.jsx — Apps-United login, signup, and dashboard (CDN React, no build) */
 const { useState, useEffect, useMemo } = React;
 
 // ---- Storage keys & helpers --------------------------------------------
@@ -42,8 +42,8 @@ function isSessionFresh(s, now = Date.now()) {
 
 // ---- Default starter apps (placeholders for now) ------------------------
 const defaultApps = [
-  { id: "app1", name: "App One",   desc: "Your first starter app.", href: "#", badge: "Starter" },
-  { id: "app2", name: "App Two",   desc: "Another placeholder app.", href: "#", badge: "Starter" },
+  { id: "app1", name: "App One",   desc: "Your first starter app.",   href: "#", badge: "Starter" },
+  { id: "app2", name: "App Two",   desc: "Another placeholder app.",  href: "#", badge: "Starter" },
   { id: "app3", name: "App Three", desc: "Ready for future features.", href: "#", badge: "Starter" },
   { id: "app4", name: "App Four",  desc: "Customize this later.",     href: "#", badge: "Starter" },
 ];
@@ -52,9 +52,12 @@ const defaultApps = [
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container">
-      <header className="au-header" style={{alignItems:"flex-start"}}>
+      <header className="au-header" style={{ alignItems: "flex-start" }}>
         {/* Brand: logo with text UNDER it */}
-        <div className="au-brand" style={{flexDirection:"column", alignItems:"center", textAlign:"center"}}>
+        <div
+          className="au-brand"
+          style={{ flexDirection: "column", alignItems: "center", textAlign: "center" }}
+        >
           <img
             src="./favicon-192.png"
             alt="Apps-United logo"
@@ -211,129 +214,112 @@ function App() {
     </Shell>
   );
 
-  <div style={{ gridColumn: "1 / -1" }}>
-  <label className="au-note">Full name</label>
-  <input
-    className="au-input"
-    placeholder="Jane Doe"
-    value={signupForm.fullName}
-    onChange={(e) =>
-      setSignupForm({ ...signupForm, fullName: e.target.value })
-    }
-  />
-</div>
-
-<div style={{ gridColumn: "1 / -1" }}>
-  <label className="au-note">Email</label>
-  <input
-    className="au-input"
-    type="email"
-    placeholder="you@example.com"
-    value={signupForm.email}
-    onChange={(e) =>
-      setSignupForm({ ...signupForm, email: e.target.value })
-    }
-  />
-</div>
-
-<div>
-  <label className="au-note">Password</label>
-  <input
-    className="au-input"
-    type="password"
-    placeholder="Min 8 characters"
-    value={signupForm.password}
-    onChange={(e) =>
-      setSignupForm({ ...signupForm, password: e.target.value })
-    }
-  />
-</div>
-
-<div>
-  <label className="au-note">Confirm password</label>
-  <input
-    className="au-input"
-    type="password"
-    placeholder="Repeat password"
-    value={signupForm.confirm}
-    onChange={(e) =>
-      setSignupForm({ ...signupForm, confirm: e.target.value })
-    }
-  />
-</div>
-              <div>
-                <label className="au-note">Password</label>
-                <input
-                  className="au-input"
-                  type="password"
-                  placeholder="Min 8 characters"
-                  value={signupForm.password}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, password: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="au-note">Confirm password</label>
-                <input
-                  className="au-input"
-                  type="password"
-                  placeholder="Repeat password"
-                  value={signupForm.confirm}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, confirm: e.target.value })
-                  }
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }} className="au-row">
-                <input
-                  type="checkbox"
-                  checked={signupForm.agree}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, agree: e.target.checked })
-                  }
-                />
-                <span>
-                  I agree to the{" "}
-                  <a href="#" onClick={(e) => e.preventDefault()}>
-                    Terms & Conditions
-                  </a>.
-                </span>
-              </div>
-              <div style={{ gridColumn: "1 / -1" }} className="au-row">
-                <input
-                  type="checkbox"
-                  checked={signupForm.optIn}
-                  onChange={(e) =>
-                    setSignupForm({ ...signupForm, optIn: e.target.checked })
-                  }
-                />
-                <span>
-                  Send me helpful updates and the occasional ✨ good spam ✨
-                </span>
-              </div>
-              <div
-                className="au-row"
-                style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}
+  const Signup = () => (
+    <Shell route={route} onLogout={handleLogout}>
+      <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div className="au-card">
+          <div className="au-card-header">
+            <h2 style={{ margin: 0, fontWeight: 600 }}>Create your account</h2>
+          </div>
+        <div className="au-card-content">
+          {err && <ErrorNote>{err}</ErrorNote>}
+          <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label className="au-note">Full name</label>
+              <input
+                className="au-input"
+                placeholder="Jane Doe"
+                value={signupForm.fullName}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, fullName: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label className="au-note">Email</label>
+              <input
+                className="au-input"
+                type="email"
+                placeholder="you@example.com"
+                value={signupForm.email}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, email: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="au-note">Password</label>
+              <input
+                className="au-input"
+                type="password"
+                placeholder="Min 8 characters"
+                value={signupForm.password}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, password: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="au-note">Confirm password</label>
+              <input
+                className="au-input"
+                type="password"
+                placeholder="Repeat password"
+                value={signupForm.confirm}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, confirm: e.target.value })
+                }
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }} className="au-row">
+              <input
+                type="checkbox"
+                checked={signupForm.agree}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, agree: e.target.checked })
+                }
+              />
+              <span>
+                I agree to the{" "}
+                <a href="#" onClick={(e) => e.preventDefault()}>
+                  Terms & Conditions
+                </a>.
+              </span>
+            </div>
+            <div style={{ gridColumn: "1 / -1" }} className="au-row">
+              <input
+                type="checkbox"
+                checked={signupForm.optIn}
+                onChange={(e) =>
+                  setSignupForm({ ...signupForm, optIn: e.target.checked })
+                }
+              />
+              <span>
+                Send me helpful updates and the occasional ✨ good spam ✨
+              </span>
+            </div>
+            <div
+              className="au-row"
+              style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}
+            >
+              <button type="submit" className="au-btn au-btn-primary">
+                Create account
+              </button>
+              <button
+                type="button"
+                className="au-btn au-btn-secondary"
+                onClick={() => setRoute("login")}
               >
-                <button type="submit" className="au-btn au-btn-primary">
-                  Create account
-                </button>
-                <button
-                  type="button"
-                  className="au-btn au-btn-secondary"
-                  onClick={() => setRoute("login")}
-                >
-                  I already have an account
-                </button>
-              </div>
-            </form>
-          </div>
-          <div className="au-card-footer">
-            <p className="au-note" style={{ textAlign: "center" }}>
-              We respect your inbox. Unsubscribe anytime.
-            </p>
-          </div>
+                I already have an account
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className="au-card-footer">
+          <p className="au-note" style={{ textAlign: "center" }}>
+            We respect your inbox. Unsubscribe anytime.
+          </p>
+        </div>
         </div>
       </div>
     </Shell>
