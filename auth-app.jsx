@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United login, signup, and dashboard (CDN React, no build) */
+/* auth-app.jsx — Apps-United login, signup, dashboard (CDN React, no build) */
 const { useState, useEffect, useMemo, Component } = React;
 
 /* -------------------- Error Boundary -------------------- */
@@ -56,7 +56,7 @@ const defaultApps = [
   { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
 ];
 
-/* -------------------- UI Shell -------------------- */
+/* -------------------- Shell & small UI -------------------- */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container">
@@ -76,7 +76,6 @@ function Shell({ route, onLogout, children }) {
     </div>
   );
 }
-
 function ErrorNote({ children }) {
   return (
     <div className="au-card" style={{
@@ -88,7 +87,180 @@ function ErrorNote({ children }) {
   );
 }
 
-/* -------------------- App (router + pages) -------------------- */
+/* ==================== TOP-LEVEL PAGES (stable identity!) ==================== */
+function LoginPage({ err, form, setForm, onSubmit, goSignup, route, onLogout }) {
+  return (
+    <Shell route={route} onLogout={onLogout}>
+      <div className="au-grid" style={{ maxWidth: 520, margin: "0 auto" }}>
+        <div className="au-card">
+          <div className="au-card-header"><h2 style={{ margin: 0, fontWeight: 600 }}>Sign in</h2></div>
+          <div className="au-card-content">
+            {err && <ErrorNote>{err}</ErrorNote>}
+            <form onSubmit={onSubmit} className="au-grid" style={{ gap: 16 }}>
+              <div>
+                <label className="au-note">Email</label>
+                <input
+                  className="au-input" type="email" placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, email:v})); }}
+                  autoComplete="email" required
+                />
+              </div>
+              <div>
+                <label className="au-note">Password</label>
+                <input
+                  className="au-input" type="password" placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, password:v})); }}
+                  autoComplete="current-password" required
+                />
+              </div>
+              <div className="au-row-between" style={{ marginTop: 4 }}>
+                <label className="au-row" style={{ fontSize: 14 }}>
+                  <input
+                    type="checkbox" checked={form.stay}
+                    onChange={(e)=>{ const v=e.target.checked; setForm(s=>({...s, stay:v})); }}
+                  />
+                  <span>Stay signed in for 30 days</span>
+                </label>
+                <button type="button" className="au-btn au-btn-secondary" onClick={goSignup}>
+                  Create account
+                </button>
+              </div>
+              <button type="submit" className="au-btn au-btn-primary">Sign in</button>
+            </form>
+          </div>
+          <div className="au-card-footer">
+            <p className="au-note" style={{ textAlign: "center" }}>By signing in you agree to our Terms & Privacy.</p>
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) {
+  return (
+    <Shell route={route} onLogout={onLogout}>
+      <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div className="au-card">
+          <div className="au-card-header"><h2 style={{ margin: 0, fontWeight: 600 }}>Create your account</h2></div>
+          <div className="au-card-content">
+            {err && <ErrorNote>{err}</ErrorNote>}
+            <form onSubmit={onSubmit} className="au-grid" style={{ gap: 16 }}>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="au-note">Full name</label>
+                <input
+                  className="au-input" placeholder="Jane Doe"
+                  value={form.fullName}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, fullName:v})); }}
+                  autoComplete="name"
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="au-note">Email</label>
+                <input
+                  className="au-input" type="email" placeholder="you@example.com"
+                  value={form.email}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, email:v})); }}
+                  autoComplete="email"
+                />
+              </div>
+              <div>
+                <label className="au-note">Password</label>
+                <input
+                  className="au-input" type="password" placeholder="Min 8 characters"
+                  value={form.password}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, password:v})); }}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div>
+                <label className="au-note">Confirm password</label>
+                <input
+                  className="au-input" type="password" placeholder="Repeat password"
+                  value={form.confirm}
+                  onChange={(e)=>{ const v=e.target.value; setForm(s=>({...s, confirm:v})); }}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }} className="au-row">
+                <input
+                  type="checkbox" checked={form.agree}
+                  onChange={(e)=>{ const v=e.target.checked; setForm(s=>({...s, agree:v})); }}
+                />
+                <span>
+                  I agree to the{" "}
+                  <a href="#" onClick={(e)=>e.preventDefault()}>Terms & Conditions</a>.
+                </span>
+              </div>
+              <div style={{ gridColumn: "1 / -1" }} className="au-row">
+                <input
+                  type="checkbox" checked={form.optIn}
+                  onChange={(e)=>{ const v=e.target.checked; setForm(s=>({...s, optIn:v})); }}
+                />
+                <span>Send me helpful updates and the occasional ✨ good spam ✨</span>
+              </div>
+              <div className="au-row" style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}>
+                <button type="submit" className="au-btn au-btn-primary">Create account</button>
+                <button type="button" className="au-btn au-btn-secondary" onClick={goLogin}>
+                  I already have an account
+                </button>
+              </div>
+            </form>
+          </div>
+          <div className="au-card-footer">
+            <p className="au-note" style={{ textAlign: "center" }}>We respect your inbox. Unsubscribe anytime.</p>
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function DashboardPage({ me, route, onLogout }) {
+  const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
+  return (
+    <Shell route={route} onLogout={onLogout}>
+      <div className="au-grid" style={{ gap: 24 }}>
+        <div>
+          <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
+            Welcome{me?.fullName ? `, ${me.fullName.split(" ")[0]}` : ""} 👋
+          </h2>
+          <div className="au-note">Your starter apps are ready. Add more soon.</div>
+        </div>
+        <div className="au-grid au-grid-3">
+          {apps.map(app => (
+            <div key={app.id} className="au-card">
+              <div className="au-card-header">
+                <div className="au-row-between">
+                  <div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div>
+                  {app.badge && <span className="au-badge">{app.badge}</span>}
+                </div>
+              </div>
+              <div className="au-card-content"><div className="au-note">{app.desc}</div></div>
+              <div className="au-card-footer au-row" style={{ gap: 12 }}>
+                <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
+                <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="au-card" style={{ padding: 16 }}>
+          <div className="au-row-between">
+            <div>
+              <div className="au-subtle" style={{ fontWeight: 600 }}>Want more apps?</div>
+              <div className="au-note">We’re adding a self-serve app catalog. You’ll be able to enable/disable apps per account.</div>
+            </div>
+            <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add app</button>
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+/* ============================== App (Router) ============================== */
 function App(){
   const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
   const [err, setErr] = useState("");
@@ -98,17 +270,15 @@ function App(){
   });
   const [me, setMe] = useState(null);
 
-  // Bootstrap session with sliding 30-day window
   useEffect(()=>{
     const s = loadSession();
     if (!isSessionFresh(s)) { clearSession(); setRoute("login"); return; }
     const user = getUserByEmail(s.email);
     if (!user) { clearSession(); setRoute("login"); return; }
-    saveSession({ ...s, lastActive: Date.now() }); // extend on open
+    saveSession({ ...s, lastActive: Date.now() });
     setMe(user); setRoute("dashboard");
   },[]);
 
-  /* ---- Auth actions ---- */
   function handleLogin(e){
     e.preventDefault(); setErr("");
     const u = getUserByEmail(loginForm.email || "");
@@ -127,7 +297,6 @@ function App(){
     if (password !== confirm) return setErr("Passwords do not match.");
     if (!agree) return setErr("You must agree to the Terms & Conditions.");
     if (getUserByEmail(email)) return setErr("That email is already registered.");
-
     const user = { fullName: fullName.trim(), email: email.trim(), passwordHash: demoHash(password), optIn: !!optIn, apps: [...defaultApps] };
     upsertUser(user);
     saveSession({ email: user.email, lastActive: Date.now(), persistent: true });
@@ -136,214 +305,36 @@ function App(){
 
   function handleLogout(){ clearSession(); setMe(null); setRoute("login"); }
 
-  /* ---- Pages ---- */
-
-  // LOGIN — controlled inputs with onChange (capture value in local first)
-  const Login = () => (
-    <Shell route={route} onLogout={handleLogout}>
-      <div className="au-grid" style={{ maxWidth: 520, margin: "0 auto" }}>
-        <div className="au-card">
-          <div className="au-card-header">
-            <h2 style={{ margin: 0, fontWeight: 600 }}>Sign in</h2>
-          </div>
-          <div className="au-card-content">
-            {err && <ErrorNote>{err}</ErrorNote>}
-            <form onSubmit={handleLogin} className="au-grid" style={{ gap: 16 }}>
-              <div>
-                <label className="au-note">Email</label>
-                <input
-                  className="au-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={loginForm.email}
-                  onChange={(e)=>{ const v=e.target.value; setLoginForm(s=>({...s, email:v})); }}
-                  autoComplete="email"
-                  required
-                />
-              </div>
-              <div>
-                <label className="au-note">Password</label>
-                <input
-                  className="au-input"
-                  type="password"
-                  placeholder="••••••••"
-                  value={loginForm.password}
-                  onChange={(e)=>{ const v=e.target.value; setLoginForm(s=>({...s, password:v})); }}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-              <div className="au-row-between" style={{ marginTop: 4 }}>
-                <label className="au-row" style={{ fontSize: 14 }}>
-                  <input
-                    type="checkbox"
-                    checked={loginForm.stay}
-                    onChange={(e)=>{ const v=e.target.checked; setLoginForm(s=>({...s, stay:v})); }}
-                  />
-                  <span>Stay signed in for 30 days</span>
-                </label>
-                <button type="button" className="au-btn au-btn-secondary" onClick={()=>setRoute("signup")}>
-                  Create account
-                </button>
-              </div>
-              <button type="submit" className="au-btn au-btn-primary">Sign in</button>
-            </form>
-          </div>
-          <div className="au-card-footer">
-            <p className="au-note" style={{ textAlign: "center" }}>By signing in you agree to our Terms & Privacy.</p>
-          </div>
-        </div>
-      </div>
-    </Shell>
-  );
-
-  // SIGNUP — controlled inputs with onChange (capture value in local first)
-  const Signup = () => (
-    <Shell route={route} onLogout={handleLogout}>
-      <div className="au-grid" style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div className="au-card">
-          <div className="au-card-header">
-            <h2 style={{ margin: 0, fontWeight: 600 }}>Create your account</h2>
-          </div>
-          <div className="au-card-content">
-            {err && <ErrorNote>{err}</ErrorNote>}
-            <form onSubmit={handleSignup} className="au-grid" style={{ gap: 16 }}>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label className="au-note">Full name</label>
-                <input
-                  className="au-input"
-                  placeholder="Jane Doe"
-                  value={signupForm.fullName}
-                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, fullName:v})); }}
-                  autoComplete="name"
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label className="au-note">Email</label>
-                <input
-                  className="au-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={signupForm.email}
-                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, email:v})); }}
-                  autoComplete="email"
-                />
-              </div>
-              <div>
-                <label className="au-note">Password</label>
-                <input
-                  className="au-input"
-                  type="password"
-                  placeholder="Min 8 characters"
-                  value={signupForm.password}
-                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, password:v})); }}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <label className="au-note">Confirm password</label>
-                <input
-                  className="au-input"
-                  type="password"
-                  placeholder="Repeat password"
-                  value={signupForm.confirm}
-                  onChange={(e)=>{ const v=e.target.value; setSignupForm(s=>({...s, confirm:v})); }}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div style={{ gridColumn: "1 / -1" }} className="au-row">
-                <input
-                  type="checkbox"
-                  checked={signupForm.agree}
-                  onChange={(e)=>{ const v=e.target.checked; setSignupForm(s=>({...s, agree:v})); }}
-                />
-                <span>
-                  I agree to the{" "}
-                  <a href="#" onClick={(e)=>e.preventDefault()}>Terms & Conditions</a>.
-                </span>
-              </div>
-              <div style={{ gridColumn: "1 / -1" }} className="au-row">
-                <input
-                  type="checkbox"
-                  checked={signupForm.optIn}
-                  onChange={(e)=>{ const v=e.target.checked; setSignupForm(s=>({...s, optIn:v})); }}
-                />
-                <span>Send me helpful updates and the occasional ✨ good spam ✨</span>
-              </div>
-              <div className="au-row" style={{ gridColumn: "1 / -1", gap: 12, flexWrap: "wrap" }}>
-                <button type="submit" className="au-btn au-btn-primary">Create account</button>
-                <button type="button" className="au-btn au-btn-secondary" onClick={()=>setRoute("login")}>
-                  I already have an account
-                </button>
-              </div>
-            </form>
-          </div>
-          <div className="au-card-footer">
-            <p className="au-note" style={{ textAlign: "center" }}>We respect your inbox. Unsubscribe anytime.</p>
-          </div>
-        </div>
-      </div>
-    </Shell>
-  );
-
-  // DASHBOARD
-  const Dashboard = () => {
-    const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
-    return (
-      <Shell route={route} onLogout={handleLogout}>
-        <div className="au-grid" style={{ gap: 24 }}>
-          <div>
-            <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-              Welcome{me?.fullName ? `, ${me.fullName.split(" ")[0]}` : ""} 👋
-            </h2>
-            <div className="au-note">Your starter apps are ready. Add more soon.</div>
-          </div>
-
-          <div className="au-grid au-grid-3">
-            {apps.map(app => (
-              <div key={app.id} className="au-card">
-                <div className="au-card-header">
-                  <div className="au-row-between">
-                    <div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div>
-                    {app.badge && <span className="au-badge">{app.badge}</span>}
-                  </div>
-                </div>
-                <div className="au-card-content">
-                  <div className="au-note">{app.desc}</div>
-                </div>
-                <div className="au-card-footer au-row" style={{ gap: 12 }}>
-                  <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
-                  <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="au-card" style={{ padding: 16 }}>
-            <div className="au-row-between">
-              <div>
-                <div className="au-subtle" style={{ fontWeight: 600 }}>Want more apps?</div>
-                <div className="au-note">We’re adding a self-serve app catalog. You’ll be able to enable/disable apps per account.</div>
-              </div>
-              <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add app</button>
-            </div>
-          </div>
-        </div>
-      </Shell>
-    );
-  };
-
-  // ROUTER
   if (route === "loading") {
+    return <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>Loading…</div>;
+  }
+  if (route === "login") {
     return (
-      <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>
-        Loading…
-      </div>
+      <LoginPage
+        err={err}
+        form={loginForm}
+        setForm={setLoginForm}
+        onSubmit={handleLogin}
+        goSignup={()=>{ setErr(""); setRoute("signup"); }}
+        route={route}
+        onLogout={handleLogout}
+      />
     );
   }
-  if (route === "login") return <Login />;
-  if (route === "signup") return <Signup />;
-  return <Dashboard />;
+  if (route === "signup") {
+    return (
+      <SignupPage
+        err={err}
+        form={signupForm}
+        setForm={setSignupForm}
+        onSubmit={handleSignup}
+        goLogin={()=>{ setErr(""); setRoute("login"); }}
+        route={route}
+        onLogout={handleLogout}
+      />
+    );
+  }
+  return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
 }
 
 /* -------------------- Mount -------------------- */
