@@ -174,3 +174,23 @@ p{ color: var(--muted); }
   .au-card{ border-radius: 14px; }
   .au-btn{ width: 100%; }
 }
+
+/* Center brand in header on all pages */
+.au-header{
+  position: relative;              /* allow absolute logout */
+  display:flex;
+  justify-content:center;          /* center the brand horizontally */
+  align-items:center;
+}
+
+/* Make sure the brand itself is centered */
+.au-brand{
+  margin: 0 auto;                  /* reinforces centering */
+}
+
+/* Keep Logout at top-right on dashboard only */
+.au-logout{
+  position: absolute;
+  right: 10px;
+  top: 8px;
+}
