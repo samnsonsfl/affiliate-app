@@ -1,24 +1,22 @@
-/* auth-app.jsx — Apps-United + Supabase Auth (CDN React, no build) */
+/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day) */
 const { useState, useEffect, useMemo, Component } = React;
 
-/* ====== 0) CONFIG — put your real project values here ====== */
-const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";      // ← replace
-const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";             // ← replace
+/* ================== Supabase config (fill your anon key) ================== */
+const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ"; // ← from Settings → API
 
-/* ====== 1) Supabase client ====== */
-const supabase = window.supabase.createClient(https://pvfxettbmykvezwahohh.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ, {
-  auth: {
-    persistSession: true,          // store session in localStorage
-    autoRefreshToken: true,
-    detectSessionInUrl: false,     // we’re not using magic links here
-  },
+if (!window.supabase) {
+  console.error("Supabase client script missing. Add @supabase/supabase-js@2 before this file.");
+}
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
 
-/* ====== 2) Error boundary (so blank pages show an error panel) ====== */
+/* ================== Error Boundary (prevents blank page) ================== */
 class ErrorBoundary extends Component {
-  constructor(p){ super(p); this.state = { error: null }; }
-  static getDerivedStateFromError(e){ return { error: e }; }
-  componentDidCatch(e, info){ console.error("Apps-United error:", e, info); }
+  constructor(props){ super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error){ return { error }; }
+  componentDidCatch(error, info){ console.error("Apps-United error:", error, info); }
   render(){
     if (this.state.error) {
       return (
@@ -34,10 +32,19 @@ class ErrorBoundary extends Component {
   }
 }
 
-/* ====== 3) App data & helpers ====== */
+/* ================== Sliding 30-day helpers (lastActive) ================== */
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-const LS_LAST_ACTIVE = "appsUnited.lastActive"; // for sliding 30-day logout
+const LS_LAST_ACTIVE = "appsUnited.lastActive";
 
+function getLastActive(){ try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); } catch { return 0; } }
+function bumpLastActive(){ try { localStorage.setItem(LS_LAST_ACTIVE, String(Date.now())); } catch {} }
+function isWithinThirtyDays(){
+  const last = getLastActive();
+  if (!last) return false;
+  return (Date.now() - last) < THIRTY_DAYS;
+}
+
+/* ================== Starter apps (unchanged) ================== */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
   { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
@@ -45,20 +52,7 @@ const defaultApps = [
   { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
 ];
 
-function getLastActive() {
-  try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); }
-  catch { return 0; }
-}
-function bumpLastActive() {
-  try { localStorage.setItem(LS_LAST_ACTIVE, String(Date.now())); } catch {}
-}
-function isWithinThirtyDays() {
-  const last = getLastActive();
-  if (!last) return false;
-  return (Date.now() - last) < THIRTY_DAYS;
-}
-
-/* ====== 4) UI Shell ====== */
+/* ================== Shell & small UI (unchanged visuals) ================== */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container">
@@ -81,14 +75,15 @@ function Shell({ route, onLogout, children }) {
 function ErrorNote({ children }) {
   return (
     <div className="au-card" style={{
-      borderColor:"rgba(248,113,113,.5)", background:"rgba(248,113,113,.12)", padding:12, marginBottom:8
+      borderColor: "rgba(248,113,113,.5)", background:"rgba(248,113,113,.12)",
+      padding: 12, marginBottom: 8
     }}>
       <span>⚠️</span> <span style={{ marginLeft: 8 }}>{children}</span>
     </div>
   );
 }
 
-/* ====== 5) Top-level pages (stable identity) ====== */
+/* ================== TOP-LEVEL PAGES (stable identity) ================== */
 function LoginPage({ err, form, setForm, onSubmit, goSignup, route, onLogout }) {
   return (
     <Shell route={route} onLogout={onLogout}>
@@ -218,12 +213,13 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
 
 function DashboardPage({ me, route, onLogout }) {
   const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
+  const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
         <div>
           <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-            Welcome{me?.full_name ? `, ${me.full_name.split(" ")[0]}` : ""} 👋
+            Welcome{firstName ? `, ${firstName}` : ""} 👋
           </h2>
           <div className="au-note">Your starter apps are ready. Add more soon.</div>
         </div>
@@ -258,7 +254,7 @@ function DashboardPage({ me, route, onLogout }) {
   );
 }
 
-/* ====== 6) App (Router + Supabase auth) ====== */
+/* ================== App (Router + Supabase Auth) ================== */
 function App(){
   const [route, setRoute] = useState("loading"); // loading | login | signup | dashboard
   const [err, setErr] = useState("");
@@ -266,36 +262,37 @@ function App(){
   const [signupForm, setSignupForm] = useState({
     fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true
   });
-  const [me, setMe] = useState(null); // merged view: { id, email, full_name? }
+  const [me, setMe] = useState(null); // { id, email, full_name }
 
-  // On first load: check current session + 30-day sliding window
+  // Initial session check + sliding window
   useEffect(()=>{
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setRoute("login"); return; }
 
-      // Enforce sliding 30-day window (from last time user opened app)
+      // enforce sliding 30-day window
       if (!isWithinThirtyDays()) {
         await supabase.auth.signOut();
-        localStorage.removeItem(LS_LAST_ACTIVE);
+        try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
         setRoute("login");
         return;
       }
       bumpLastActive();
 
-      // Load profile
+      // load profile
       const user = session.user;
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
+      if (error) console.warn("profiles fetch warning:", error.message);
 
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
     })();
 
-    // Keep lastActive fresh whenever Supabase refreshes the session
+    // keep lastActive fresh when Supabase refreshes tokens
     const { data: sub } = supabase.auth.onAuthStateChange((_event, _session) => {
       if (_session) bumpLastActive();
     });
@@ -305,18 +302,15 @@ function App(){
   async function handleLogin(e){
     e.preventDefault(); setErr("");
     try {
-      const stay = !!loginForm.stay;
-      // Note: Supabase persistSession=true already uses localStorage.
       const { data, error } = await supabase.auth.signInWithPassword({
         email: (loginForm.email || "").trim(),
         password: loginForm.password || "",
       });
       if (error) throw error;
 
-      // Sliding window: start counting from “now”
-      bumpLastActive();
+      bumpLastActive(); // start 30-day window from now
 
-      // Load profile
+      // fetch profile
       const user = data.user;
       const { data: profile } = await supabase
         .from("profiles")
@@ -327,11 +321,12 @@ function App(){
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
 
-      // (Optional) If user didn’t check “stay signed in”, we can simulate session-only by clearing
-      // the sliding window on tab close (best-effort). Real session shortening needs a server.
-      if (!stay) window.addEventListener("beforeunload", () => {
-        try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
-      }, { once: true });
+      // If user unchecked “stay signed in”, clear window on tab close (best-effort)
+      if (!loginForm.stay) {
+        window.addEventListener("beforeunload", () => {
+          try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
+        }, { once: true });
+      }
     } catch (e) {
       console.error(e);
       setErr(e.message || "Login failed.");
@@ -348,34 +343,29 @@ function App(){
       if (password !== confirm) throw new Error("Passwords do not match.");
       if (!agree) throw new Error("You must agree to the Terms & Conditions.");
 
-      // Supabase sign up
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: { full_name: fullName.trim() } // stored in auth.users.user_metadata
-        }
+        options: { data: { full_name: fullName.trim() } }
       });
       if (error) throw error;
 
-      // Create profile row tied to auth user id
       const user = data.user;
       if (user) {
-        await supabase.from("profiles").upsert({
+        const { error: upsertErr } = await supabase.from("profiles").upsert({
           id: user.id,
           full_name: fullName.trim(),
           opt_in: !!optIn,
         });
+        if (upsertErr) console.warn("profiles upsert warning:", upsertErr.message);
       }
 
-      // Sliding window starts now
       bumpLastActive();
 
-      // If your project has email confirmations enabled, user may need to confirm.
-      // For simplicity, go to dashboard if session exists; else, show a message.
-      const { data: sessionRes } = await supabase.auth.getSession();
-      if (!sessionRes.session) {
-        setErr("Check your inbox to confirm your email, then sign in.");
+      // If email confirmations are enabled, there may be no session until they confirm:
+      const { data: s } = await supabase.auth.getSession();
+      if (!s.session) {
+        setErr("Check your email to confirm your account, then sign in.");
         setRoute("login");
         return;
       }
@@ -426,7 +416,7 @@ function App(){
   return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
 }
 
-/* ====== 7) Mount ====== */
+/* ================== Mount ================== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
   <ErrorBoundary>
     <App />
