@@ -52,6 +52,32 @@ const defaultApps = [
   { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
 ];
 
+/* ---------- Dashboard prefs (grid + folders) ---------- */
+const LS_PREFS = "appsUnited.prefs";
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; }
+}
+function savePrefs(p) {
+  try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
+}
+
+/* Shape:
+{
+  grid: "5" | "4",
+  folders: [{ id, name }],
+  appFolders: { [appId]: folderId }   // app → folder mapping
+}
+*/
+function ensurePrefsShape(p) {
+  return {
+    grid: p.grid === "4" ? "4" : "5",
+    folders: Array.isArray(p.folders) ? p.folders : [],
+    appFolders: p.appFolders && typeof p.appFolders === "object" ? p.appFolders : {}
+  };
+}
+function uid() { return Math.random().toString(36).slice(2, 8); }
+
 /* ================== Shell & small UI (unchanged visuals) ================== */
 function Shell({ route, onLogout, children }) {
   return (
@@ -216,42 +242,207 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
 }
 
 function DashboardPage({ me, route, onLogout }) {
+  // apps source
   const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
+
+  // prefs state
+  const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
+  const [search, setSearch] = React.useState("");
+  const [activeFolder, setActiveFolder] = React.useState("all"); // "all" | folderId
+  const [newFolderName, setNewFolderName] = React.useState("");
+
+  // persist prefs
+  useEffect(()=> { savePrefs(prefs); }, [prefs]);
+
   const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
+
+  // derived lists
+  const folders = prefs.folders;
+  const appFolders = prefs.appFolders;
+
+  // filter by folder
+  const appsInView = apps.filter(a => {
+    if (activeFolder === "all") return true;
+    return appFolders[a.id] === activeFolder;
+  });
+
+  // search filter (case-insensitive, name + desc)
+  const s = search.trim().toLowerCase();
+  const filteredApps = !s ? appsInView : appsInView.filter(a =>
+    a.name.toLowerCase().includes(s) || (a.desc||"").toLowerCase().includes(s)
+  );
+
+  // actions
+  function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
+
+  function addFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    const id = uid();
+    setPrefs(p => ({ ...p, folders: [...p.folders, { id, name }] }));
+    setNewFolderName("");
+    setActiveFolder(id);
+  }
+
+  function renameFolder(id, name) {
+    setPrefs(p => ({
+      ...p,
+      folders: p.folders.map(f => f.id === id ? { ...f, name: name.trim() || f.name } : f)
+    }));
+  }
+
+  function deleteFolder(id) {
+    // remove folder and unassign apps that were in it
+    setPrefs(p => {
+      const nextFolders = p.folders.filter(f => f.id !== id);
+      const nextMap = { ...p.appFolders };
+      for (const k of Object.keys(nextMap)) {
+        if (nextMap[k] === id) delete nextMap[k];
+      }
+      return { ...p, folders: nextFolders, appFolders: nextMap };
+    });
+    if (activeFolder === id) setActiveFolder("all");
+  }
+
+  function assignAppToFolder(appId, folderId) {
+    setPrefs(p => {
+      const next = { ...p.appFolders };
+      if (folderId === "none") delete next[appId];
+      else next[appId] = folderId;
+      return { ...p, appFolders: next };
+    });
+  }
+
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
+        {/* Greeting */}
         <div>
           <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
             Welcome{firstName ? `, ${firstName}` : ""} 👋
           </h2>
           <div className="au-note">Your starter apps are ready. Add more soon.</div>
         </div>
-        <div className="au-grid au-grid-3">
-          {apps.map(app => (
+
+        {/* Controls row */}
+        <div className="au-card" style={{ padding: 12 }}>
+          <div className="au-controls">
+            {/* Folder filter */}
+            <div className="au-controls__group">
+              <label className="au-note">Folder</label>
+              <select
+                className="au-input au-select"
+                value={activeFolder}
+                onChange={(e)=>setActiveFolder(e.target.value)}
+              >
+                <option value="all">All</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Size switcher */}
+            <div className="au-controls__group">
+              <label className="au-note">Size</label>
+              <div className="au-seg">
+                <button
+                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+                  onClick={()=>setGrid("5")}
+                  title="5 cards across"
+                >5x♾️</button>
+                <button
+                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+                  onClick={()=>setGrid("4")}
+                  title="4 cards across"
+                >4x♾️</button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="au-controls__group au-controls__grow">
+              <label className="au-note">Search</label>
+              <input
+                className="au-input"
+                placeholder="Find an app…"
+                value={search}
+                onChange={(e)=>setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Folders manager */}
+        <div className="au-card" style={{ padding: 14 }}>
+          <div className="au-row-between" style={{ alignItems:"flex-start" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {folders.length === 0 ? (
+                <div className="au-note">No folders yet.</div>
+              ) : (
+                folders.map(f => (
+                  <div key={f.id} className="au-folderchip">
+                    <input
+                      className="au-folderchip__name"
+                      value={f.name}
+                      onChange={(e)=>renameFolder(f.id, e.target.value)}
+                    />
+                    <button className="au-folderchip__x" onClick={()=>deleteFolder(f.id)} title="Delete">×</button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="au-row" style={{ gap:8 }}>
+              <input
+                className="au-input"
+                placeholder="New folder name"
+                value={newFolderName}
+                onChange={(e)=>setNewFolderName(e.target.value)}
+                style={{ width: 220 }}
+              />
+              <button className="au-btn au-btn-primary" onClick={addFolder}>Add Folder</button>
+            </div>
+          </div>
+          <div className="au-note" style={{ marginTop: 8 }}>
+            Tip: assign any app to a folder using the dropdown on its card.
+          </div>
+        </div>
+
+        {/* Apps grid */}
+        <div className={`au-grid apps-grid ${prefs.grid === "4" ? "apps-grid--4" : "apps-grid--5"}`}>
+          {filteredApps.map(app => (
             <div key={app.id} className="au-card">
               <div className="au-card-header">
-                <div className="au-row-between">
+                <div className="au-row-between" style={{ alignItems:"center" }}>
                   <div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div>
-                  {app.badge && <span className="au-badge">{app.badge}</span>}
+                  <div className="au-row" style={{ gap:8 }}>
+                    {app.badge && <span className="au-badge">{app.badge}</span>}
+                    {/* Folder selector per app */}
+                    <select
+                      className="au-input au-select au-select--mini"
+                      value={appFolders[app.id] || "none"}
+                      onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
+                      title="Move to folder"
+                    >
+                      <option value="none">No folder</option>
+                      {folders.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
-              <div className="au-card-content"><div className="au-note">{app.desc}</div></div>
+              <div className="au-card-content">
+                <div className="au-note">{app.desc}</div>
+              </div>
               <div className="au-card-footer au-row" style={{ gap: 12 }}>
                 <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name} (stub)`)}>Open</button>
                 <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add to favorites</button>
               </div>
             </div>
           ))}
-        </div>
-        <div className="au-card" style={{ padding: 16 }}>
-          <div className="au-row-between">
-            <div>
-              <div className="au-subtle" style={{ fontWeight: 600 }}>Want more apps?</div>
-              <div className="au-note">We’re adding a self-serve app catalog. You’ll be able to enable/disable apps per account.</div>
-            </div>
-            <button className="au-btn au-btn-secondary" disabled title="Coming soon">Add app</button>
-          </div>
+          {filteredApps.length === 0 && (
+            <div className="au-note" style={{ padding:12 }}>No apps match your search or folder.</div>
+          )}
         </div>
       </div>
     </Shell>
