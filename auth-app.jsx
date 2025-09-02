@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day) */
+/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day + search/folders/4x-5x) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, useMemo, Component } = React;
 
@@ -46,13 +46,8 @@ function isWithinThirtyDays(){
 
 /* ---------- Dashboard prefs (grid + folders in localStorage) ---------- */
 const LS_PREFS = "appsUnited.prefs";
-
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; }
-}
-function savePrefs(p) {
-  try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
-}
+function loadPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; } }
+function savePrefs(p) { try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {} }
 /* Shape:
 {
   grid: "5" | "4",
@@ -69,7 +64,7 @@ function ensurePrefsShape(p) {
 }
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
-/* ================== Placeholder apps (visual only) ================== */
+/* ================== Placeholder apps (visual only fallback) ================== */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
   { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
@@ -292,9 +287,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
     });
   }
 
-  // (Optional) add/remove to/from myApps against Supabase user_apps later.
-  // For now, we assume myApps already holds the user's selected apps.
-
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
@@ -423,7 +415,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
   );
 }
 
-
 /* ================== App (Router + Supabase Auth) ================== */
 function App(){
   const [route, setRoute] = useState("loading");
@@ -434,6 +425,7 @@ function App(){
   const [catalog, setCatalog] = useState([]);   // full apps list from Supabase
   const [myApps, setMyApps] = useState([]);     // the user’s selected apps
 
+  // Initial session check + sliding window + load apps
   useEffect(()=>{
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -449,24 +441,45 @@ function App(){
       bumpLastActive();
 
       const user = session.user;
+
+      // profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
 
-      setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
-
-      // Load catalog and user selections
+      // catalog + my apps
       const [{ data: apps }, { data: rows }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
 
-      const mySet = new Set((rows || []).map(r => r.app_id));
-      setCatalog(apps || []);
-      setMyApps((apps || []).filter(a => mySet.has(a.id)));
+      // if user has no apps, grant defaults once
+      if (!rows || rows.length === 0) {
+        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+        if (defaults?.length) {
+          await supabase
+            .from("user_apps")
+            .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })))
+            .catch(()=>{});
+          // reload rows
+          const { data: rows2 } = await supabase.from("user_apps").select("app_id").eq("user_id", user.id);
+          const mySet2 = new Set((rows2 || []).map(r => r.app_id));
+          setCatalog(apps || []);
+          setMyApps((apps || []).filter(a => mySet2.has(a.id)));
+        } else {
+          const mySet = new Set((rows || []).map(r => r.app_id));
+          setCatalog(apps || []);
+          setMyApps((apps || []).filter(a => mySet.has(a.id)));
+        }
+      } else {
+        const mySet = new Set((rows || []).map(r => r.app_id));
+        setCatalog(apps || []);
+        setMyApps((apps || []).filter(a => mySet.has(a.id)));
+      }
 
+      setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
     })();
 
@@ -476,12 +489,39 @@ function App(){
     return () => { sub.subscription.unsubscribe(); };
   },[]);
 
+  // ---- Login
+  async function handleLogin(e){
+    e.preventDefault(); setErr("");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: (loginForm.email || "").trim(),
+        password: loginForm.password || "",
+      });
+      if (error) throw error;
 
-      // Grant defaults if none exist
+      const user = data.user;
+
+      // start 30-day window
+      bumpLastActive();
+      if (!loginForm.stay) {
+        window.addEventListener("beforeunload", () => {
+          try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
+        }, { once: true });
+      }
+
+      // profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, opt_in")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      // grant defaults if none, then load apps
       const { data: rows } = await supabase
         .from("user_apps")
         .select("app_id")
         .eq("user_id", user.id);
+
       if (!rows || rows.length === 0) {
         const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
         if (defaults?.length) {
@@ -489,26 +529,23 @@ function App(){
         }
       }
 
-      bumpLastActive();
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, opt_in")
-        .eq("id", user.id)
-        .maybeSingle();
+      const [{ data: apps }, { data: rows2 }] = await Promise.all([
+        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
+      const mySet = new Set((rows2 || []).map(r => r.app_id));
+      setCatalog(apps || []);
+      setMyApps((apps || []).filter(a => mySet.has(a.id)));
 
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
       setRoute("dashboard");
-
-      if (!loginForm.stay) {
-        window.addEventListener("beforeunload", () => { try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {} }, { once: true });
-      }
     } catch (e) {
       console.error(e);
       setErr(e.message || "Login failed.");
     }
   }
 
+  // ---- Signup
   async function handleSignup(e){
     e.preventDefault(); setErr("");
     try {
@@ -545,6 +582,15 @@ function App(){
       }
 
       setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
+      // Load apps after signup
+      const [{ data: apps }, { data: rows2 }] = await Promise.all([
+        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
+      const mySet = new Set((rows2 || []).map(r => r.app_id));
+      setCatalog(apps || []);
+      setMyApps((apps || []).filter(a => mySet.has(a.id)));
+
       setRoute("dashboard");
     } catch (e) {
       console.error(e);
@@ -552,12 +598,14 @@ function App(){
     }
   }
 
+  // ---- Logout
   async function handleLogout(){
     await supabase.auth.signOut();
     try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
     setMe(null); setRoute("login");
   }
 
+  // ---- Router
   if (route === "loading")
     return <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>Loading…</div>;
 
@@ -568,23 +616,14 @@ function App(){
     return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
 
   return <DashboardPage
-  me={me}
-  route={route}
-  onLogout={handleLogout}
-  catalog={catalog}
-  myApps={myApps}
-  setMyApps={setMyApps}
-/>;
+    me={me}
+    route={route}
+    onLogout={handleLogout}
+    catalog={catalog}
+    myApps={myApps}
+    setMyApps={setMyApps}
+  />;
 }
-
-// After profile loaded in handleLogin:
-const [{ data: apps }, { data: rows }] = await Promise.all([
-  supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
-  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-]);
-const mySet = new Set((rows || []).map(r => r.app_id));
-setCatalog(apps || []);
-setMyApps((apps || []).filter(a => mySet.has(a.id)));
 
 /* ================== Mount ================== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
