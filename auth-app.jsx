@@ -1,8 +1,8 @@
-/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day + search/folders/4x-5x + Catalog page) */
+/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day + search/folders/4x-5x-6x + Catalog page) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, useMemo, Component } = React;
 
-/* ================== Supabase config ================== */
+/* ================== Supabase config (hardened) ================== */
 const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
 
@@ -29,7 +29,6 @@ if (!window.supabase || typeof window.supabase.createClient !== "function") {
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
-
 
 /* ================== Error Boundary (prevents blank page) ================== */
 class ErrorBoundary extends Component {
@@ -68,7 +67,7 @@ function loadPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) ||
 function savePrefs(p) { try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {} }
 /* Shape:
 {
-  grid: "5" | "4",
+  grid: "6" | "5" | "4",
   folders: [{ id, name }],
   appFolders: { [appId]: folderId }
 }
@@ -82,14 +81,6 @@ function ensurePrefsShape(p) {
   };
 }
 function uid() { return Math.random().toString(36).slice(2, 8); }
-
-/* ================== Placeholder apps (visual only fallback) ================== */
-const defaultApps = [
-  { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
-  { id: "app2", name: "App Two",   desc: "Another placeholder app.",  badge: "Starter" },
-  { id: "app3", name: "App Three", desc: "Ready for future features.", badge: "Starter" },
-  { id: "app4", name: "App Four",  desc: "Customize this later.",     badge: "Starter" },
-];
 
 /* ================== Shell UI (keeps your look) ================== */
 function Shell({ route, onLogout, children }) {
@@ -270,7 +261,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
     a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
   );
 
-  // Sort alphabetically (once)
+  // Sort alphabetically
   filteredApps = [...filteredApps].sort((a, b) => {
     if (sortOrder === "az") return a.name.localeCompare(b.name);
     if (sortOrder === "za") return b.name.localeCompare(a.name);
@@ -330,68 +321,68 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
         {/* Controls row */}
         <div className="au-card" style={{ padding: 12 }}>
           <div className="au-controls">
-  {/* Folder filter */}
-  <div className="au-controls__group">
-    <label className="au-note">Folder</label>
-    <select
-      className="au-input au-select"
-      value={activeFolder}
-      onChange={(e)=>setActiveFolder(e.target.value)}
-    >
-      <option value="all">All</option>
-      {folders.map(f => (
-        <option key={f.id} value={f.id}>{f.name}</option>
-      ))}
-    </select>
-  </div>
+            {/* Folder filter */}
+            <div className="au-controls__group">
+              <label className="au-note">Folder</label>
+              <select
+                className="au-input au-select"
+                value={activeFolder}
+                onChange={(e)=>setActiveFolder(e.target.value)}
+              >
+                <option value="all">All</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
 
-  {/* Size switcher */}
-  <div className="au-controls__group">
-    <label className="au-note">Size</label>
-    <div className="au-seg">
-      <button
-        className={`au-seg__btn ${prefs.grid === "6" ? "is-active":""}`}
-        onClick={()=>setGrid("6")}
-        title="6 apps across"
-      >6x♾️</button>
-      <button
-        className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
-        onClick={()=>setGrid("5")}
-        title="5 apps across"
-      >5x♾️</button>
-      <button
-        className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
-        onClick={()=>setGrid("4")}
-        title="4 apps across"
-      >4x♾️</button>
-    </div>
-  </div>
+            {/* Size switcher */}
+            <div className="au-controls__group">
+              <label className="au-note">Size</label>
+              <div className="au-seg">
+                <button
+                  className={`au-seg__btn ${prefs.grid === "6" ? "is-active":""}`}
+                  onClick={()=>setGrid("6")}
+                  title="6 apps across"
+                >6x♾️</button>
+                <button
+                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+                  onClick={()=>setGrid("5")}
+                  title="5 apps across"
+                >5x♾️</button>
+                <button
+                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+                  onClick={()=>setGrid("4")}
+                  title="4 apps across"
+                >4x♾️</button>
+              </div>
+            </div>
 
-  {/* Sort (A→Z / Z→A) — moved BEFORE Search */}
-  <div className="au-controls__group">
-    <label className="au-note">Sort</label>
-    <select
-      className="au-input au-select"
-      value={sortOrder}
-      onChange={(e)=>setSortOrder(e.target.value)}
-    >
-      <option value="az">A → Z</option>
-      <option value="za">Z → A</option>
-    </select>
-  </div>
+            {/* Sort (A→Z / Z→A) — placed before Search */}
+            <div className="au-controls__group">
+              <label className="au-note">Sort</label>
+              <select
+                className="au-input au-select"
+                value={sortOrder}
+                onChange={(e)=>setSortOrder(e.target.value)}
+              >
+                <option value="az">A → Z</option>
+                <option value="za">Z → A</option>
+              </select>
+            </div>
 
-  {/* Search (smaller; now at the end) */}
-  <div className="au-controls__group au-controls__search">
-    <label className="au-note">Search</label>
-    <input
-      className="au-input"
-      placeholder="Find an app…"
-      value={search}
-      onChange={(e)=>setSearch(e.target.value)}
-    />
-  </div>
-</div>
-
+            {/* Search (smaller; at end) */}
+            <div className="au-controls__group au-controls__search">
+              <label className="au-note">Search</label>
+              <input
+                className="au-input"
+                placeholder="Find an app…"
+                value={search}
+                onChange={(e)=>setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Folders manager */}
         <div className="au-card" style={{ padding: 14 }}>
@@ -430,10 +421,10 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
 
         {/* Apps grid — phone-style tiles */}
         <div className={`apps-grid ${
-  prefs.grid === "6" ? "apps-grid--6"
-  : prefs.grid === "4" ? "apps-grid--4"
-  : "apps-grid--5"
-}`}>
+          prefs.grid === "6" ? "apps-grid--6"
+          : prefs.grid === "4" ? "apps-grid--4"
+          : "apps-grid--5"
+        }`}>
           {filteredApps.map(app => (
             <div key={app.id} className="app-tile">
               <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
@@ -867,7 +858,7 @@ function App(){
   );
 } // ← closes function App()
 
-/* ================== Mount ================== */
+/* ================== Mount (safe for React 17/18) ================== */
 const mount = (
   <ErrorBoundary>
     <App />
