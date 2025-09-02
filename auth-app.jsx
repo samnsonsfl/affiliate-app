@@ -529,7 +529,7 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
                 <div className="app-actions">
                   <button
                     className="au-btn au-btn-primary"
-                    onClick={()=>!added && addApp(app)}
+                    onClick={async ()=>{ await addApp(app); /* optionally: */ /* setRoute("dashboard"); */ }}
                     disabled={added}
                     title={added ? "Already added" : "Add this app"}
                   >
