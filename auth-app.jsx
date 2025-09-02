@@ -44,6 +44,31 @@ function isWithinThirtyDays(){
   return (Date.now() - last) < THIRTY_DAYS;
 }
 
+/* ---------- Dashboard prefs (grid + folders in localStorage) ---------- */
+const LS_PREFS = "appsUnited.prefs";
+
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; }
+}
+function savePrefs(p) {
+  try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {}
+}
+/* Shape:
+{
+  grid: "5" | "4",
+  folders: [{ id, name }],
+  appFolders: { [appId]: folderId }
+}
+*/
+function ensurePrefsShape(p) {
+  return {
+    grid: p.grid === "4" ? "4" : "5",
+    folders: Array.isArray(p.folders) ? p.folders : [],
+    appFolders: p.appFolders && typeof p.appFolders === "object" ? p.appFolders : {}
+  };
+}
+function uid() { return Math.random().toString(36).slice(2, 8); }
+
 /* ================== Placeholder apps (visual only) ================== */
 const defaultApps = [
   { id: "app1", name: "App One",   desc: "Your first starter app.",   badge: "Starter" },
@@ -207,32 +232,197 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
   );
 }
 
-function DashboardPage({ me, route, onLogout }) {
-  const apps = useMemo(()=> (me?.apps?.length ? me.apps : defaultApps), [me]);
+function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
+  // prefs
+  const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
+  const [search, setSearch] = React.useState("");
+  const [activeFolder, setActiveFolder] = React.useState("all"); // "all" or folderId
+  const [newFolderName, setNewFolderName] = React.useState("");
+
+  useEffect(()=> { savePrefs(prefs); }, [prefs]);
+
+  const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
+
+  // Folder mapping
+  const folders = prefs.folders;
+  const appFolders = prefs.appFolders;
+
+  // Filter by folder then by search
+  const appsInView = myApps.filter(a => activeFolder === "all" ? true : appFolders[a.id] === activeFolder);
+  const s = search.trim().toLowerCase();
+  const filteredApps = !s ? appsInView : appsInView.filter(a =>
+    a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
+  );
+
+  // Actions
+  function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
+
+  function addFolder() {
+    const name = newFolderName.trim();
+    if (!name) return;
+    const id = uid();
+    setPrefs(p => ({ ...p, folders: [...p.folders, { id, name }] }));
+    setNewFolderName("");
+    setActiveFolder(id);
+  }
+
+  function renameFolder(id, name) {
+    setPrefs(p => ({
+      ...p,
+      folders: p.folders.map(f => f.id === id ? { ...f, name: name.trim() || f.name } : f)
+    }));
+  }
+
+  function deleteFolder(id) {
+    setPrefs(p => {
+      const nextFolders = p.folders.filter(f => f.id !== id);
+      const nextMap = { ...p.appFolders };
+      for (const k of Object.keys(nextMap)) if (nextMap[k] === id) delete nextMap[k];
+      return { ...p, folders: nextFolders, appFolders: nextMap };
+    });
+    if (activeFolder === id) setActiveFolder("all");
+  }
+
+  function assignAppToFolder(appId, folderId) {
+    setPrefs(p => {
+      const next = { ...p.appFolders };
+      if (folderId === "none") delete next[appId];
+      else next[appId] = folderId;
+      return { ...p, appFolders: next };
+    });
+  }
+
+  // (Optional) add/remove to/from myApps against Supabase user_apps later.
+  // For now, we assume myApps already holds the user's selected apps.
+
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
+        {/* Greeting */}
         <div>
           <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-            Welcome{me?.full_name ? `, ${me.full_name.split(" ")[0]}` : ""} 👋
+            Welcome{firstName ? `, ${firstName}` : ""} 👋
           </h2>
-          <div className="au-note">Your starter apps are ready. Add more soon.</div>
+          <div className="au-note">Your apps are below. Use search, size, and folders to organize.</div>
         </div>
-        <div className="au-grid au-grid-3">
-          {apps.map(app => (
-            <div key={app.id} className="au-card">
-              <div className="au-card-header"><div className="au-subtle" style={{ fontWeight: 600 }}>{app.name}</div></div>
-              <div className="au-card-content"><div className="au-note">{app.desc}</div></div>
-              <div className="au-card-footer au-row" style={{ gap: 12 }}>
-                <button className="au-btn au-btn-primary" onClick={()=>alert(`Open ${app.name}`)}>Open</button>
+
+        {/* Controls row */}
+        <div className="au-card" style={{ padding: 12 }}>
+          <div className="au-controls">
+            {/* Folder filter */}
+            <div className="au-controls__group">
+              <label className="au-note">Folder</label>
+              <select
+                className="au-input au-select"
+                value={activeFolder}
+                onChange={(e)=>setActiveFolder(e.target.value)}
+              >
+                <option value="all">All</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Size switcher */}
+            <div className="au-controls__group">
+              <label className="au-note">Size</label>
+              <div className="au-seg">
+                <button
+                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+                  onClick={()=>setGrid("5")}
+                  title="5 apps across"
+                >5x♾️</button>
+                <button
+                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+                  onClick={()=>setGrid("4")}
+                  title="4 apps across"
+                >4x♾️</button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="au-controls__group au-controls__grow">
+              <label className="au-note">Search</label>
+              <input
+                className="au-input"
+                placeholder="Find an app…"
+                value={search}
+                onChange={(e)=>setSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Folders manager */}
+        <div className="au-card" style={{ padding: 14 }}>
+          <div className="au-row-between" style={{ alignItems:"flex-start" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {folders.length === 0 ? (
+                <div className="au-note">No folders yet.</div>
+              ) : (
+                folders.map(f => (
+                  <div key={f.id} className="au-folderchip">
+                    <input
+                      className="au-folderchip__name"
+                      value={f.name}
+                      onChange={(e)=>renameFolder(f.id, e.target.value)}
+                    />
+                    <button className="au-folderchip__x" onClick={()=>deleteFolder(f.id)} title="Delete">×</button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="au-row" style={{ gap:8 }}>
+              <input
+                className="au-input"
+                placeholder="New folder name"
+                value={newFolderName}
+                onChange={(e)=>setNewFolderName(e.target.value)}
+                style={{ width: 220 }}
+              />
+              <button className="au-btn au-btn-primary" onClick={addFolder}>Add Folder</button>
+            </div>
+          </div>
+          <div className="au-note" style={{ marginTop: 8 }}>
+            Tip: move any app using the dropdown on its card.
+          </div>
+        </div>
+
+        {/* Apps grid — phone-style tiles */}
+        <div className={`apps-grid ${prefs.grid === "4" ? "apps-grid--4" : "apps-grid--5"}`}>
+          {filteredApps.map(app => (
+            <div key={app.id} className="app-tile">
+              <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
+                <div className="app-icon" aria-hidden="true">
+                  <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                </div>
+                <div className="app-name" title={app.name}>{app.name}</div>
+              </a>
+              <div className="app-actions">
+                <select
+                  className="au-input au-select au-select--mini"
+                  value={appFolders[app.id] || "none"}
+                  onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
+                  title="Move to folder"
+                >
+                  <option value="none">No folder</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           ))}
+          {filteredApps.length === 0 && (
+            <div className="au-note" style={{ padding:12 }}>No apps match your search or folder.</div>
+          )}
         </div>
       </div>
     </Shell>
   );
 }
+
 
 /* ================== App (Router + Supabase Auth) ================== */
 function App(){
@@ -241,12 +431,15 @@ function App(){
   const [loginForm, setLoginForm] = useState({ email:"", password:"", stay:true });
   const [signupForm, setSignupForm] = useState({ fullName:"", email:"", password:"", confirm:"", agree:false, optIn:true });
   const [me, setMe] = useState(null);
+  const [catalog, setCatalog] = useState([]);   // full apps list from Supabase
+  const [myApps, setMyApps] = useState([]);     // the user’s selected apps
 
   useEffect(()=>{
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setRoute("login"); return; }
 
+      // Sliding window
       if (!isWithinThirtyDays()) {
         await supabase.auth.signOut();
         try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
@@ -263,6 +456,17 @@ function App(){
         .maybeSingle();
 
       setMe({ id: user.id, email: user.email, full_name: profile?.full_name || "" });
+
+      // Load catalog and user selections
+      const [{ data: apps }, { data: rows }] = await Promise.all([
+        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
+
+      const mySet = new Set((rows || []).map(r => r.app_id));
+      setCatalog(apps || []);
+      setMyApps((apps || []).filter(a => mySet.has(a.id)));
+
       setRoute("dashboard");
     })();
 
@@ -272,15 +476,6 @@ function App(){
     return () => { sub.subscription.unsubscribe(); };
   },[]);
 
-  async function handleLogin(e){
-    e.preventDefault(); setErr("");
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: (loginForm.email || "").trim(),
-        password: loginForm.password || "",
-      });
-      if (error) throw error;
-      const user = data.user;
 
       // Grant defaults if none exist
       const { data: rows } = await supabase
@@ -374,6 +569,15 @@ function App(){
 
   return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
 }
+
+// After profile loaded in handleLogin:
+const [{ data: apps }, { data: rows }] = await Promise.all([
+  supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+]);
+const mySet = new Set((rows || []).map(r => r.app_id));
+setCatalog(apps || []);
+setMyApps((apps || []).filter(a => mySet.has(a.id)));
 
 /* ================== Mount ================== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
