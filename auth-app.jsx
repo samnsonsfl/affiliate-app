@@ -567,7 +567,14 @@ function App(){
   if (route === "signup")
     return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
 
-  return <DashboardPage me={me} route={route} onLogout={handleLogout} />;
+  return <DashboardPage
+  me={me}
+  route={route}
+  onLogout={handleLogout}
+  catalog={catalog}
+  myApps={myApps}
+  setMyApps={setMyApps}
+/>;
 }
 
 // After profile loaded in handleLogin:
