@@ -6,12 +6,30 @@ const { useState, useEffect, useMemo, Component } = React;
 const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
 
-if (!window.supabase) {
-  console.error("Supabase client script missing. Add @supabase/supabase-js@2 before this file.");
+function bailHard(msg) {
+  const el = document.getElementById("auth-root");
+  if (el) {
+    el.innerHTML = `<div style="padding:24px;font-family:system-ui,sans-serif;color:#fff;background:#0b1220">
+      <div style="max-width:720px;margin:0 auto">
+        <h2 style="margin:0 0 8px">Apps-United</h2>
+        <div style="padding:12px;border:1px solid rgba(248,113,113,.5);background:rgba(248,113,113,.12);border-radius:12px">
+          <strong>Startup error</strong><br/>${msg}
+        </div>
+        <p style="opacity:.8;margin-top:10px">Make sure <code>@supabase/supabase-js@2</code> is loaded <em>before</em> this file.</p>
+      </div>
+    </div>`;
+  }
+  throw new Error(msg);
 }
+
+if (!window.supabase || typeof window.supabase.createClient !== "function") {
+  bailHard("Supabase client script missing.");
+}
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
+
 
 /* ================== Error Boundary (prevents blank page) ================== */
 class ErrorBoundary extends Component {
@@ -850,8 +868,14 @@ function App(){
 } // ← closes function App()
 
 /* ================== Mount ================== */
-ReactDOM.createRoot(document.getElementById("auth-root")).render(
+const mount = (
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
 );
+const rootEl = document.getElementById("auth-root");
+if (ReactDOM.createRoot) {
+  ReactDOM.createRoot(rootEl).render(mount);
+} else {
+  ReactDOM.render(mount, rootEl);
+}
