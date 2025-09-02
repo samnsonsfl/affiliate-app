@@ -567,7 +567,8 @@ function App(){
 
       // catalog + my apps
       const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
+.eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -664,7 +665,8 @@ function App(){
       }
 
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
+.eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -734,7 +736,8 @@ function App(){
 
       // Load catalog & my apps after signup
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
+.eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
