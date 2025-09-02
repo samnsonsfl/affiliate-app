@@ -56,8 +56,9 @@ function savePrefs(p) { try { localStorage.setItem(LS_PREFS, JSON.stringify(p));
 }
 */
 function ensurePrefsShape(p) {
+  const allowed = new Set(["4","5","6"]);
   return {
-    grid: p.grid === "4" ? "4" : "5",
+    grid: allowed.has(p.grid) ? p.grid : "5",
     folders: Array.isArray(p.folders) ? p.folders : [],
     appFolders: p.appFolders && typeof p.appFolders === "object" ? p.appFolders : {}
   };
@@ -311,63 +312,68 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
         {/* Controls row */}
         <div className="au-card" style={{ padding: 12 }}>
           <div className="au-controls">
-            {/* Folder filter */}
-            <div className="au-controls__group">
-              <label className="au-note">Folder</label>
-              <select
-                className="au-input au-select"
-                value={activeFolder}
-                onChange={(e)=>setActiveFolder(e.target.value)}
-              >
-                <option value="all">All</option>
-                {folders.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
+  {/* Folder filter */}
+  <div className="au-controls__group">
+    <label className="au-note">Folder</label>
+    <select
+      className="au-input au-select"
+      value={activeFolder}
+      onChange={(e)=>setActiveFolder(e.target.value)}
+    >
+      <option value="all">All</option>
+      {folders.map(f => (
+        <option key={f.id} value={f.id}>{f.name}</option>
+      ))}
+    </select>
+  </div>
 
-            {/* Size switcher */}
-            <div className="au-controls__group">
-              <label className="au-note">Size</label>
-              <div className="au-seg">
-                <button
-                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
-                  onClick={()=>setGrid("5")}
-                  title="5 apps across"
-                >5x♾️</button>
-                <button
-                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
-                  onClick={()=>setGrid("4")}
-                  title="4 apps across"
-                >4x♾️</button>
-              </div>
-            </div>
+  {/* Size switcher */}
+  <div className="au-controls__group">
+    <label className="au-note">Size</label>
+    <div className="au-seg">
+      <button
+        className={`au-seg__btn ${prefs.grid === "6" ? "is-active":""}`}
+        onClick={()=>setGrid("6")}
+        title="6 apps across"
+      >6x♾️</button>
+      <button
+        className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+        onClick={()=>setGrid("5")}
+        title="5 apps across"
+      >5x♾️</button>
+      <button
+        className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+        onClick={()=>setGrid("4")}
+        title="4 apps across"
+      >4x♾️</button>
+    </div>
+  </div>
 
-            {/* Search (smaller) */}
-            <div className="au-controls__group au-controls__search">
-              <label className="au-note">Search</label>
-              <input
-                className="au-input"
-                placeholder="Find an app…"
-                value={search}
-                onChange={(e)=>setSearch(e.target.value)}
-              />
-            </div>
+  {/* Sort (A→Z / Z→A) — moved BEFORE Search */}
+  <div className="au-controls__group">
+    <label className="au-note">Sort</label>
+    <select
+      className="au-input au-select"
+      value={sortOrder}
+      onChange={(e)=>setSortOrder(e.target.value)}
+    >
+      <option value="az">A → Z</option>
+      <option value="za">Z → A</option>
+    </select>
+  </div>
 
-            {/* Sort (A→Z / Z→A) */}
-            <div className="au-controls__group">
-              <label className="au-note">Sort</label>
-              <select
-                className="au-input au-select"
-                value={sortOrder}
-                onChange={(e)=>setSortOrder(e.target.value)}
-              >
-                <option value="az">A → Z</option>
-                <option value="za">Z → A</option>
-              </select>
-            </div>
-          </div>
-        </div> {/* ← close the controls au-card properly */}
+  {/* Search (smaller; now at the end) */}
+  <div className="au-controls__group au-controls__search">
+    <label className="au-note">Search</label>
+    <input
+      className="au-input"
+      placeholder="Find an app…"
+      value={search}
+      onChange={(e)=>setSearch(e.target.value)}
+    />
+  </div>
+</div>
+
 
         {/* Folders manager */}
         <div className="au-card" style={{ padding: 14 }}>
@@ -405,7 +411,11 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
         </div>
 
         {/* Apps grid — phone-style tiles */}
-        <div className={`apps-grid ${prefs.grid === "4" ? "apps-grid--4" : "apps-grid--5"}`}>
+        <div className={`apps-grid ${
+  prefs.grid === "6" ? "apps-grid--6"
+  : prefs.grid === "4" ? "apps-grid--4"
+  : "apps-grid--5"
+}`}>
           {filteredApps.map(app => (
             <div key={app.id} className="app-tile">
               <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
