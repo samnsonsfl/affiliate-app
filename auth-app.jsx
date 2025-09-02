@@ -232,6 +232,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   // prefs
   const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
   const [search, setSearch] = React.useState("");
+  const [sortOrder, setSortOrder] = React.useState("az"); // "az" | "za"
   const [activeFolder, setActiveFolder] = React.useState("all"); // "all" or folderId
   const [newFolderName, setNewFolderName] = React.useState("");
 
@@ -246,9 +247,16 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   // Filter by folder then by search (for user's apps)
   const appsInView = myApps.filter(a => activeFolder === "all" ? true : appFolders[a.id] === activeFolder);
   const s = search.trim().toLowerCase();
-  const filteredApps = !s ? appsInView : appsInView.filter(a =>
-    a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
-  );
+  let filteredApps = !s ? appsInView : appsInView.filter(a =>
+  a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
+);
+
+// Sort alphabetically
+filteredApps = [...filteredApps].sort((a, b) => {
+  if (sortOrder === "az") return a.name.localeCompare(b.name);
+  if (sortOrder === "za") return b.name.localeCompare(a.name);
+  return 0;
+});
 
   // Grid size
   function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
@@ -347,6 +355,20 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
             </div>
           </div>
         </div>
+
+        {/* Sort */}
+<div className="au-controls__group">
+  <label className="au-note">Sort</label>
+  <select
+    className="au-input au-select"
+    value={sortOrder}
+    onChange={(e)=>setSortOrder(e.target.value)}
+  >
+    <option value="az">A → Z</option>
+    <option value="za">Z → A</option>
+  </select>
+</div>
+
 
         {/* Folders manager */}
         <div className="au-card" style={{ padding: 14 }}>
