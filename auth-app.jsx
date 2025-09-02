@@ -535,28 +535,40 @@ function App(){
       const user = session.user;
 
       // profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
+      if (profErr) console.warn("profiles warning:", profErr.message);
 
       // catalog + my apps
-      const [{ data: apps }, { data: rows }] = await Promise.all([
+      const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rowsErr) console.warn("user_apps load warning:", rowsErr.message);
 
       // if user has no apps, grant defaults once
       if (!rows || rows.length === 0) {
-        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+        const { data: defaults, error: defErr } = await supabase
+          .from("apps")
+          .select("id")
+          .eq("is_default", true);
+        if (defErr) console.warn("defaults warning:", defErr.message);
+
         if (defaults?.length) {
-          await supabase
+          const { error: insertErr } = await supabase
             .from("user_apps")
-            .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })))
-            .catch(()=>{});
+            .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
+          if (insertErr) console.warn("user_apps insert warning:", insertErr.message);
+
           // reload rows
-          const { data: rows2 } = await supabase.from("user_apps").select("app_id").eq("user_id", user.id);
+          const { data: rows2, error: rows2Err } =
+            await supabase.from("user_apps").select("app_id").eq("user_id", user.id);
+          if (rows2Err) console.warn("user_apps reload warning:", rows2Err.message);
+
           const mySet2 = new Set((rows2 || []).map(r => r.app_id));
           setCatalog(apps || []);
           setMyApps((apps || []).filter(a => mySet2.has(a.id)));
@@ -602,29 +614,39 @@ function App(){
       }
 
       // profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profErr } = await supabase
         .from("profiles")
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
+      if (profErr) console.warn("profiles warning:", profErr.message);
 
       // grant defaults if none, then load apps
-      const { data: rows } = await supabase
+      const { data: rows, error: rowsErr } = await supabase
         .from("user_apps")
         .select("app_id")
         .eq("user_id", user.id);
+      if (rowsErr) console.warn("user_apps load warning:", rowsErr.message);
 
       if (!rows || rows.length === 0) {
-        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
+        const { data: defaults, error: defErr } =
+          await supabase.from("apps").select("id").eq("is_default", true);
+        if (defErr) console.warn("defaults load warning:", defErr.message);
         if (defaults?.length) {
-          await supabase.from("user_apps").insert(defaults.map(a => ({ user_id: user.id, app_id: a.id }))).catch(()=>{});
+          const { error: insertErr } = await supabase
+            .from("user_apps")
+            .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
+          if (insertErr) console.warn("user_apps insert warning:", insertErr.message);
         }
       }
 
-      const [{ data: apps }, { data: rows2 }] = await Promise.all([
+      const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rows2Err) console.warn("user_apps reload warning:", rows2Err.message);
+
       const mySet = new Set((rows2 || []).map(r => r.app_id));
       setCatalog(apps || []);
       setMyApps((apps || []).filter(a => mySet.has(a.id)));
@@ -639,9 +661,12 @@ function App(){
 
   // ---- Signup
   async function handleSignup(e){
-    e.preventDefault(); setErr("");
+    e.preventDefault();
+    setErr("");
+
     try {
       const { fullName, email, password, confirm, agree, optIn } = signupForm;
+
       if (!fullName.trim()) throw new Error("Please enter your full name.");
       if (!/\S+@\S+\.\S+/.test(email)) throw new Error("Please enter a valid email address.");
       if ((password || "").length < 8) throw new Error("Password must be at least 8 characters.");
@@ -654,35 +679,51 @@ function App(){
         options: { data: { full_name: fullName.trim() } }
       });
       if (error) throw error;
+
       const user = data.user;
-
-      if (user) {
-        await supabase.from("profiles").upsert({ id: user.id, full_name: fullName.trim(), opt_in: !!optIn });
-        const { data: defaults } = await supabase.from("apps").select("id").eq("is_default", true);
-        if (defaults?.length) {
-          await supabase.from("user_apps").insert(defaults.map(a => ({ user_id: user.id, app_id: a.id }))).catch(()=>{});
-        }
-      }
-
-      bumpLastActive();
-
       const { data: s } = await supabase.auth.getSession();
-      if (!s.session) {
+      if (!s.session || !user) {
         setErr("Check your email to confirm your account, then sign in.");
         setRoute("login");
         return;
       }
 
-      setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
-      // Load apps after signup
-      const [{ data: apps }, { data: rows2 }] = await Promise.all([
+      const { error: profileErr } = await supabase.from("profiles").upsert({
+        id: user.id,
+        full_name: fullName.trim(),
+        opt_in: !!optIn
+      });
+      if (profileErr) console.warn("profiles upsert warning:", profileErr.message);
+
+      const { data: defaults, error: defErr } =
+        await supabase.from("apps").select("id").eq("is_default", true);
+      if (defErr) console.warn("defaults load warning:", defErr.message);
+
+      if (defaults?.length) {
+        // Use upsert with unique constraint on (user_id, app_id)
+        const { error: upsertErr } = await supabase
+          .from("user_apps")
+          .upsert(
+            defaults.map(a => ({ user_id: user.id, app_id: a.id })),
+            { onConflict: "user_id,app_id", ignoreDuplicates: true }
+          );
+        if (upsertErr) console.warn("user_apps upsert warning:", upsertErr.message);
+      }
+
+      bumpLastActive();
+
+      // Load catalog & my apps after signup
+      const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rows2Err) console.warn("user_apps load warning:", rows2Err.message);
+
+      setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
       const mySet = new Set((rows2 || []).map(r => r.app_id));
       setCatalog(apps || []);
       setMyApps((apps || []).filter(a => mySet.has(a.id)));
-
       setRoute("dashboard");
     } catch (e) {
       console.error(e);
