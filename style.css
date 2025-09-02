@@ -2,22 +2,22 @@
 
 /* Color system (dark, high-contrast, white text) */
 :root{
-  --bg-1: #0b1220;           /* deep navy */
-  --bg-2: #0f172a;           /* slate-900 */
-  --bg-3: #111827;           /* gray-900 */
+  --bg-1: #0b1220;
+  --bg-2: #0f172a;
+  --bg-3: #111827;
   --glass: rgba(255,255,255,0.06);
   --glass-strong: rgba(255,255,255,0.10);
   --border: rgba(255,255,255,0.12);
   --white: #fff;
   --muted: rgba(255,255,255,0.75);
   --muted-2: rgba(255,255,255,0.55);
-  --brand-1: #60a5fa;        /* primary */
-  --brand-2: #34d399;        /* accent */
+  --brand-1: #60a5fa;
+  --brand-2: #34d399;
   --danger: #f87171;
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
-/* Page backgrounds (subtle gradient that shifts on route) */
+/* Page backgrounds */
 .au-container{
   min-height: 100vh;
   color: var(--white);
@@ -27,8 +27,6 @@
     linear-gradient(180deg, var(--bg-1), var(--bg-2) 35%, var(--bg-3));
   padding: 28px 18px 48px;
 }
-
-/* Slightly different hue on Signup (via data-route) */
 .au-container[data-route="signup"]{
   background:
     radial-gradient(1200px 800px at -10% 0%, rgba(96,165,250,.20), transparent 60%),
@@ -38,16 +36,16 @@
 
 /* Header */
 .au-header{
-  display:flex; justify-content:space-between; align-items:center;
+  position: relative;
+  display:flex; justify-content:center; align-items:center;
   max-width:1100px; margin:0 auto 28px; padding:6px 10px;
 }
-.au-brand{
-  display:flex; gap:12px; align-items:center;
-}
+.au-brand{ display:flex; gap:12px; align-items:center; margin:0 auto; }
 .au-subtle{ color:var(--white); opacity:0.95; letter-spacing:.2px; }
 .au-note{ color:var(--muted); font-size:0.95rem; }
+.au-logout{ position:absolute; right:10px; top:8px; }
 
-/* Grid helpers (unchanged layout, nicer gaps) */
+/* Grid helpers */
 .au-grid{ display:grid; gap:18px; }
 .au-grid-3{ grid-template-columns: repeat(1, minmax(0,1fr)); }
 @media (min-width: 640px){ .au-grid-3{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
@@ -56,7 +54,7 @@
 .au-row{ display:flex; align-items:center; gap:10px; }
 .au-row-between{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 
-/* Cards (glassmorphism + soft hover) */
+/* Cards */
 .au-card{
   background: var(--glass);
   border:1px solid var(--border);
@@ -67,7 +65,6 @@
   transition: transform .18s ease, background .18s ease, border-color .18s ease;
 }
 .au-card:hover{ transform: translateY(-2px); background: var(--glass-strong); border-color: rgba(255,255,255,0.18); }
-
 .au-card-header{ padding:18px 18px 8px; }
 .au-card-content{ padding: 0 18px 18px; }
 .au-card-footer{ padding: 12px 18px 18px; border-top:1px dashed rgba(255,255,255,0.08); }
@@ -79,7 +76,7 @@
   color: var(--muted);
 }
 
-/* Inputs — crisp borders, large hit area, strong focus ring */
+/* Inputs */
 .au-input{
   width:100%;
   background: rgba(255,255,255,0.05);
@@ -98,14 +95,9 @@
   box-shadow: 0 0 0 3px rgba(96,165,250,.25);
   background: rgba(255,255,255,0.08);
 }
+input[type="checkbox"]{ width:18px; height:18px; accent-color: var(--brand-1); border-radius:4px; cursor:pointer; }
 
-/* Checkbox alignment & visibility on dark */
-input[type="checkbox"]{
-  width:18px; height:18px; accent-color: var(--brand-1);
-  border-radius:4px; cursor:pointer;
-}
-
-/* Buttons — primary & secondary with soft glow */
+/* Buttons */
 .au-btn{
   display:inline-flex; align-items:center; justify-content:center;
   gap:8px; padding:10px 14px; border-radius:12px; border:1px solid transparent;
@@ -114,18 +106,16 @@ input[type="checkbox"]{
   white-space:nowrap;
 }
 .au-btn:active{ transform: translateY(1px); }
-
 .au-btn-primary{
   background: linear-gradient(180deg, #69adff, #4f8fe7);
   color: #0b1220;
-  border-color: rgba(255,255,255,0.0);
+  border-color: transparent;
   box-shadow: 0 6px 18px rgba(96,165,250,.35);
 }
 .au-btn-primary:hover{
   background: linear-gradient(180deg, #7bb7ff, #5a9af0);
   box-shadow: 0 8px 22px rgba(96,165,250,.45);
 }
-
 .au-btn-secondary{
   background: rgba(255,255,255,0.08);
   color: var(--white);
@@ -136,73 +126,52 @@ input[type="checkbox"]{
   border-color: rgba(255,255,255,0.28);
 }
 
-/* Error note */
+/* Error note override */
 .au-card[style*="f87171"], .au-error{
   border-color: rgba(248,113,113,.5) !important;
   background: rgba(248,113,113,.12) !important;
   color: var(--white);
 }
 
-/* Titles & text */
+/* Typography */
 h1,h2,h3,h4,h5,h6{ color: var(--white); letter-spacing:.2px; }
 label{ color: var(--muted); font-size: .95rem; }
 p{ color: var(--muted); }
 
-/* Accessibility: focus-visible outlines for keyboard users */
-:focus-visible{
-  outline: 3px solid rgba(96,165,250,.4);
-  outline-offset: 2px;
-}
+/* Accessibility */
+:focus-visible{ outline: 3px solid rgba(96,165,250,.4); outline-offset: 2px; }
 
-/* Smooth fade on page mount */
+/* Animations */
 @media (prefers-reduced-motion: no-preference){
   .au-container{ animation: fadeUp .35s ease both; }
   .au-card{ animation: popIn .25s ease both; }
 }
-@keyframes fadeUp{
-  from{ opacity:0; transform: translateY(8px); }
-  to{ opacity:1; transform: translateY(0); }
-}
-@keyframes popIn{
-  from{ opacity:0; transform: translateY(6px) scale(.98); }
-  to{ opacity:1; transform: translateY(0) scale(1); }
-}
+@keyframes fadeUp{ from{ opacity:0; transform: translateY(8px); } to{ opacity:1; transform: translateY(0); } }
+@keyframes popIn{ from{ opacity:0; transform: translateY(6px) scale(.98); } to{ opacity:1; transform: translateY(0) scale(1); } }
 
-/* Make small screens comfy */
+/* Small screens */
 @media (max-width: 420px){
   .au-header{ margin-bottom: 18px; }
   .au-card{ border-radius: 14px; }
   .au-btn{ width: 100%; }
 }
 
-/* Center brand in header on all pages */
-.au-header{
-  position: relative;              /* allow absolute logout */
-  display:flex;
-  justify-content:center;          /* center the brand horizontally */
-  align-items:center;
-}
-
-/* Make sure the brand itself is centered */
-.au-brand{
-  margin: 0 auto;                  /* reinforces centering */
-}
-
-/* Keep Logout at top-right on dashboard only */
-.au-logout{
-  position: absolute;
-  right: 10px;
-  top: 8px;
-}
-
-/* Controls bar */
+/* Controls bar (single, deduped) */
 .au-controls{
-  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+  display:flex;
+  align-items:flex-end;
+  gap:12px;
+  flex-wrap:wrap;
 }
 .au-controls__group{ display:flex; flex-direction:column; gap:6px; }
 .au-controls__grow{ flex:1 1 260px; }
+.au-controls .au-input{ width:100%; min-width:0; }
+.au-controls__search{ flex:0 1 260px; max-width:280px; }
+@media (max-width: 520px){
+  .au-controls__search { flex: 1 1 100%; max-width: 100%; }
+}
 
-/* Segmented size switch */
+/* Segmented control */
 .au-seg{
   display:inline-flex; background: rgba(255,255,255,0.08);
   border:1px solid rgba(255,255,255,0.18); border-radius:12px; overflow:hidden;
@@ -212,20 +181,6 @@ p{ color: var(--muted); }
 }
 .au-seg__btn.is-active{ background: rgba(255,255,255,0.14); }
 
-/* Apps grid: 5-wide or 4-wide */
-.apps-grid{ gap:18px; }
-.apps-grid.apps-grid--5{ grid-template-columns: repeat(1, minmax(0,1fr)); }
-.apps-grid.apps-grid--4{ grid-template-columns: repeat(1, minmax(0,1fr)); }
-
-@media (min-width: 640px){
-  .apps-grid.apps-grid--5{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-  .apps-grid.apps-grid--4{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (min-width: 1024px){
-  .apps-grid.apps-grid--5{ grid-template-columns: repeat(5, minmax(0,1fr)); }
-  .apps-grid.apps-grid--4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
-}
-
 /* Folder chips */
 .au-folderchip{
   display:inline-flex; align-items:center; gap:6px;
@@ -234,8 +189,7 @@ p{ color: var(--muted); }
   border-radius:999px; padding:4px 8px;
 }
 .au-folderchip__name{
-  background:transparent; border:0; color:#fff; width:auto; min-width:80px;
-  outline:none;
+  background:transparent; border:0; color:#fff; width:130px; min-width:80px; outline:none;
 }
 .au-folderchip__name::placeholder{ color: rgba(255,255,255,0.55); }
 .au-folderchip__x{
@@ -243,51 +197,16 @@ p{ color: var(--muted); }
   padding:0 2px;
 }
 
-/* Compact select on app cards */
-.au-select{
-  appearance:none; background-image:none;
-}
-.au-select--mini{
-  padding:6px 8px; border-radius:10px; font-size:.9rem; width:auto;
-}
-
-/* Controls bar */
-.au-controls {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-.au-controls__group { display: flex; flex-direction: column; gap: 6px; }
-.au-controls__grow { flex: 1 1 260px; }
-
-.au-seg { display: inline-flex; background: rgba(255,255,255,.08); border-radius: 12px; padding: 2px; }
-.au-seg__btn {
-  border: 0; background: transparent; color: #fff; padding: 6px 10px; border-radius: 10px; cursor: pointer;
-}
-.au-seg__btn.is-active { background: rgba(255,255,255,.16); }
-
-/* Folders UI */
-.au-folderchip {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
-  border-radius: 999px; padding: 4px 8px;
-}
-.au-folderchip__name {
-  background: transparent; border: 0; color: #fff; width: 130px; outline: none;
-}
-.au-folderchip__x {
-  border: 0; background: transparent; color: #fff; opacity: .8; cursor: pointer; font-size: 16px;
-}
+/* Selects */
+.au-select{ appearance:none; background-image:none; }
+.au-select--mini{ padding:6px 8px; border-radius:10px; font-size:.9rem; width:auto; }
 
 /* Phone-style app grid */
-.apps-grid {
-  display: grid; gap: 14px;
-}
+.apps-grid { display: grid; gap: 14px; }
 .apps-grid--5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
 .apps-grid--4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
 
-/* Individual tile sized like phone icons */
+/* Tiles */
 .app-tile {
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.12);
@@ -299,63 +218,21 @@ p{ color: var(--muted); }
 .app-icon {
   width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center;
   background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+  overflow: hidden; /* clip logos */
 }
+.app-icon__img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .app-letter { font-weight: 700; font-size: 20px; }
 .app-name {
   font-size: 12px; line-height: 1.2; text-align: center; max-width: 100%;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .app-actions { width: 100%; }
-.au-select--mini { padding: 4px 8px; font-size: 12px; }
 
-/* ===== Simple modal for Add App ===== */
+/* ===== Simple modal (if used in earlier versions) ===== */
 .au-modal { position: fixed; inset: 0; z-index: 50; }
-.au-modal__scrim {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,.5);
-  backdrop-filter: blur(2px);
-}
+.au-modal__scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
 .au-modal__panel {
-  position: relative;
-  max-width: 960px;
-  margin: 6vh auto;
-  background: var(--glass);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-
-.app-icon { /* already exists in your file; keep it */
-  width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center;
-  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
-  overflow: hidden; /* makes logos nicely clipped */
-}
-.app-icon__img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
-}
-
-/* Make the Search control smaller so Sort fits on one row */
-.au-controls__search {
-  flex: 0 1 260px;   /* don’t stretch; allow wrap */
-  max-width: 280px;  /* keep a nice visible end cap */
-}
-
-/* Tighten the controls a little to avoid overflow on mid widths */
-.au-controls {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;         /* was 14/16 in some versions */
-  flex-wrap: wrap;   /* wrap to next line on small screens */
-}
-
-/* Ensure inputs fill their control cell without overflowing */
-.au-controls .au-input {
-  width: 100%;
-  min-width: 0;      /* avoid flex overflow */
-}
-
-/* Optional: on very small screens, let Search span the row */
-@media (max-width: 520px){
-  .au-controls__search { flex: 1 1 100%; max-width: 100%; }
+  position: relative; max-width: 960px; margin: 6vh auto;
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: 16px; box-shadow: var(--shadow); padding: 16px;
 }
