@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day + search/folders/4x-5x) */
+/* auth-app.jsx — Apps-United (Supabase Auth + sliding 30-day + search/folders/4x-5x + Catalog page) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, useMemo, Component } = React;
 
@@ -227,16 +227,13 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
   );
 }
 
+/* ================== Dashboard ================== */
 function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCatalog, addApp, removeApp }) {
   // prefs
   const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
   const [search, setSearch] = React.useState("");
   const [activeFolder, setActiveFolder] = React.useState("all"); // "all" or folderId
   const [newFolderName, setNewFolderName] = React.useState("");
-
-  // add-app modal
-  const [showCatalog, setShowCatalog] = React.useState(false);
-  const [catalogSearch, setCatalogSearch] = React.useState("");
 
   useEffect(()=> { savePrefs(prefs); }, [prefs]);
 
@@ -288,49 +285,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
       return { ...p, appFolders: next };
     });
   }
-
-  // ====== Add/Remove (persisted in Supabase user_apps) ======
-  async function addApp(app) {
-    try {
-      const { error } = await supabase.from("user_apps").insert({ user_id: me.id, app_id: app.id });
-      if (error) throw error;
-      // update local state
-      setMyApps(prev => {
-        if (prev.some(p => p.id === app.id)) return prev;
-        return [...prev, app];
-      });
-    } catch (e) {
-      console.error(e);
-      alert("Could not add app: " + (e.message || e));
-    }
-  }
-  async function removeApp(app) {
-    try {
-      const { error } = await supabase.from("user_apps")
-        .delete()
-        .eq("user_id", me.id)
-        .eq("app_id", app.id);
-      if (error) throw error;
-      setMyApps(prev => prev.filter(p => p.id !== app.id));
-      // also drop folder assignment
-      setPrefs(p => {
-        const next = { ...p.appFolders };
-        delete next[app.id];
-        return { ...p, appFolders: next };
-      });
-    } catch (e) {
-      console.error(e);
-      alert("Could not remove app: " + (e.message || e));
-    }
-  }
-
-  // For catalog modal: available = catalog - myApps
-  const myIds = new Set(myApps.map(a => a.id));
-  const available = catalog.filter(a => a.is_active && !myIds.has(a.id));
-  const cs = catalogSearch.trim().toLowerCase();
-  const availableFiltered = !cs ? available : available.filter(a =>
-    a.name.toLowerCase().includes(cs) || (a.description || "").toLowerCase().includes(cs)
-  );
 
   return (
     <Shell route={route} onLogout={onLogout}>
@@ -466,11 +420,12 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   );
 }
 
+/* ================== Catalog (separate page for performance) ================== */
 function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
   const [q, setQ] = React.useState("");
   const myIds = new Set(myApps.map(a => a.id));
 
-  // light client-side pagination so huge catalogs don’t re-render all at once
+  // light client-side pagination
   const [page, setPage] = React.useState(1);
   const PAGE_SIZE = 48;
 
@@ -529,7 +484,7 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
                 <div className="app-actions">
                   <button
                     className="au-btn au-btn-primary"
-                    onClick={async ()=>{ await addApp(app); /* optionally: */ /* setRoute("dashboard"); */ }}
+                    onClick={async ()=>{ await addApp(app); }}
                     disabled={added}
                     title={added ? "Already added" : "Add this app"}
                   >
@@ -565,7 +520,7 @@ function App(){
   const [catalog, setCatalog] = useState([]);   // full apps list from Supabase
   const [myApps, setMyApps] = useState([]);     // the user’s selected apps
 
-    async function addApp(app) {
+  async function addApp(app) {
     try {
       const { error } = await supabase.from("user_apps").insert({ user_id: me.id, app_id: app.id });
       if (error) throw error;
@@ -581,8 +536,7 @@ function App(){
         .eq("app_id", app.id);
       if (error) throw error;
       setMyApps(prev => prev.filter(p => p.id !== app.id));
-      // also clear any local folder assignment for that app
-      // (we keep prefs in localStorage inside DashboardPage)
+      // folder assignment cleanup happens inside Dashboard local prefs
     } catch (e) { console.error(e); alert("Could not remove app: " + (e.message || e)); }
   }
 
@@ -769,14 +723,11 @@ function App(){
       if (defErr) console.warn("defaults load warning:", defErr.message);
 
       if (defaults?.length) {
-        // Use upsert with unique constraint on (user_id, app_id)
-        const { error: upsertErr } = await supabase
+        // Use insert; duplicates are unlikely immediately after signup
+        const { error: insertErr } = await supabase
           .from("user_apps")
-          .upsert(
-            defaults.map(a => ({ user_id: user.id, app_id: a.id })),
-            { onConflict: "user_id,app_id", ignoreDuplicates: true }
-          );
-        if (upsertErr) console.warn("user_apps upsert warning:", upsertErr.message);
+          .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
+        if (insertErr) console.warn("user_apps insert warning:", insertErr.message);
       }
 
       bumpLastActive();
@@ -808,7 +759,15 @@ function App(){
   }
 
   // ---- Router
-    if (route === "login")
+  if (route === "loading") {
+    return (
+      <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>
+        Loading…
+      </div>
+    );
+  }
+
+  if (route === "login")
     return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={handleLogout} />;
 
   if (route === "signup")
@@ -838,7 +797,7 @@ function App(){
       removeApp={removeApp}
     />
   );
-
+} // ← closes function App()
 
 /* ================== Mount ================== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
