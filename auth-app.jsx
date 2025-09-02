@@ -251,6 +251,13 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
 );
 
+filteredApps = [...filteredApps].sort((a, b) => {
+  if (sortOrder === "az") return a.name.localeCompare(b.name);
+  if (sortOrder === "za") return b.name.localeCompare(a.name);
+  return 0;
+});
+
+
 // Sort alphabetically
 filteredApps = [...filteredApps].sort((a, b) => {
   if (sortOrder === "az") return a.name.localeCompare(b.name);
@@ -311,63 +318,63 @@ filteredApps = [...filteredApps].sort((a, b) => {
         {/* Controls row */}
         <div className="au-card" style={{ padding: 12 }}>
           <div className="au-controls">
-            {/* Folder filter */}
-            <div className="au-controls__group">
-              <label className="au-note">Folder</label>
-              <select
-                className="au-input au-select"
-                value={activeFolder}
-                onChange={(e)=>setActiveFolder(e.target.value)}
-              >
-                <option value="all">All</option>
-                {folders.map(f => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
-                ))}
-              </select>
-            </div>
+  {/* Folder filter */}
+  <div className="au-controls__group">
+    <label className="au-note">Folder</label>
+    <select
+      className="au-input au-select"
+      value={activeFolder}
+      onChange={(e)=>setActiveFolder(e.target.value)}
+    >
+      <option value="all">All</option>
+      {folders.map(f => (
+        <option key={f.id} value={f.id}>{f.name}</option>
+      ))}
+    </select>
+  </div>
 
-            {/* Size switcher */}
-            <div className="au-controls__group">
-              <label className="au-note">Size</label>
-              <div className="au-seg">
-                <button
-                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
-                  onClick={()=>setGrid("5")}
-                  title="5 apps across"
-                >5x♾️</button>
-                <button
-                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
-                  onClick={()=>setGrid("4")}
-                  title="4 apps across"
-                >4x♾️</button>
-              </div>
-            </div>
+  {/* Size switcher */}
+  <div className="au-controls__group">
+    <label className="au-note">Size</label>
+    <div className="au-seg">
+      <button
+        className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+        onClick={()=>setGrid("5")}
+        title="5 apps across"
+      >5x♾️</button>
+      <button
+        className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+        onClick={()=>setGrid("4")}
+        title="4 apps across"
+      >4x♾️</button>
+    </div>
+  </div>
 
-            {/* Search */}
-            <div className="au-controls__group au-controls__grow">
-              <label className="au-note">Search</label>
-              <input
-                className="au-input"
-                placeholder="Find an app…"
-                value={search}
-                onChange={(e)=>setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+  {/* Search (smaller) */}
+  <div className="au-controls__group au-controls__search">
+    <label className="au-note">Search</label>
+    <input
+      className="au-input"
+      placeholder="Find an app…"
+      value={search}
+      onChange={(e)=>setSearch(e.target.value)}
+    />
+  </div>
 
-        {/* Sort */}
-<div className="au-controls__group">
-  <label className="au-note">Sort</label>
-  <select
-    className="au-input au-select"
-    value={sortOrder}
-    onChange={(e)=>setSortOrder(e.target.value)}
-  >
-    <option value="az">A → Z</option>
-    <option value="za">Z → A</option>
-  </select>
+  {/* Sort (A→Z / Z→A) */}
+  <div className="au-controls__group">
+    <label className="au-note">Sort</label>
+    <select
+      className="au-input au-select"
+      value={sortOrder}
+      onChange={(e)=>setSortOrder(e.target.value)}
+    >
+      <option value="az">A → Z</option>
+      <option value="za">Z → A</option>
+    </select>
+  </div>
 </div>
+
 
 
         {/* Folders manager */}
