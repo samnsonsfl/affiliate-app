@@ -15,6 +15,7 @@
   --brand-2: #34d399;
   --danger: #f87171;
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
+  --select-bg: #2b2f3a; /* medium gray for dropdowns */
 }
 
 /* Page backgrounds */
@@ -197,8 +198,14 @@ p{ color: var(--muted); }
   padding:0 2px;
 }
 
-/* Selects */
+/* Selects (dark) */
 .au-select{ appearance:none; background-image:none; }
+.au-select,
+.au-select option {
+  background-color: var(--select-bg);
+  color: #fff;
+  border-color: rgba(255,255,255,0.18);
+}
 .au-select--mini{ padding:6px 8px; border-radius:10px; font-size:.9rem; width:auto; }
 
 /* Phone-style app grid */
@@ -241,29 +248,11 @@ p{ color: var(--muted); }
 }
 .app-actions { width: 100%; }
 
-/* ===== Simple modal (if used in earlier versions) ===== */
+/* ===== Simple modal (legacy support; unused in catalog page) ===== */
 .au-modal { position: fixed; inset: 0; z-index: 50; }
 .au-modal__scrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
 .au-modal__panel {
   position: relative; max-width: 960px; margin: 6vh auto;
   background: var(--glass); border: 1px solid var(--border);
   border-radius: 16px; box-shadow: var(--shadow); padding: 16px;
-}
-
-:root{
-  /* ...existing vars... */
-  --select-bg: #2b2f3a;        /* medium gray for dropdowns */
-}
-
-/* Make selects match dark theme */
-.au-select {
-  background-color: var(--select-bg);
-  color: #fff;
-  border-color: rgba(255,255,255,0.18);
-}
-
-/* Option lists in many browsers inherit this */
-.au-select option {
-  background-color: var(--select-bg);
-  color: #fff;
 }
