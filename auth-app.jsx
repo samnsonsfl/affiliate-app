@@ -227,7 +227,7 @@ function SignupPage({ err, form, setForm, onSubmit, goLogin, route, onLogout }) 
   );
 }
 
-function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
+function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCatalog, addApp, removeApp }) {
   // prefs
   const [prefs, setPrefs] = React.useState(() => ensurePrefsShape(loadPrefs()));
   const [search, setSearch] = React.useState("");
@@ -343,7 +343,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
             </h2>
             <div className="au-note">Your apps are below. Use search, size, and folders to organize.</div>
           </div>
-          <button className="au-btn au-btn-primary" onClick={()=>setShowCatalog(true)}>Add app</button>
+          <button className="au-btn au-btn-primary" onClick={goCatalog}>Add app</button>
         </div>
 
         {/* Controls row */}
@@ -462,50 +462,98 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
           )}
         </div>
       </div>
+    </Shell>
+  );
+}
 
-      {/* ===== Add App Modal ===== */}
-      {showCatalog && (
-        <div className="au-modal">
-          <div className="au-modal__scrim" onClick={()=>setShowCatalog(false)} />
-          <div className="au-modal__panel">
-            <div className="au-row-between" style={{ marginBottom: 12 }}>
-              <h3 style={{ margin: 0 }}>Add apps</h3>
-              <button className="au-btn au-btn-secondary" onClick={()=>setShowCatalog(false)}>Close</button>
-            </div>
-            <div className="au-controls__group" style={{ marginBottom: 12 }}>
+function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
+  const [q, setQ] = React.useState("");
+  const myIds = new Set(myApps.map(a => a.id));
+
+  // light client-side pagination so huge catalogs don’t re-render all at once
+  const [page, setPage] = React.useState(1);
+  const PAGE_SIZE = 48;
+
+  const filtered = React.useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const base = s
+      ? catalog.filter(a =>
+          (a.name || "").toLowerCase().includes(s) ||
+          (a.description || "").toLowerCase().includes(s)
+        )
+      : catalog;
+    return base;
+  }, [catalog, q]);
+
+  const slice = filtered.slice(0, PAGE_SIZE * page);
+  const hasMore = slice.length < filtered.length;
+
+  return (
+    <Shell route={route} onLogout={()=>{}}>
+      <div className="au-grid" style={{ gap: 18 }}>
+        <div className="au-row-between">
+          <button className="au-btn au-btn-secondary" onClick={onBack}>← Back</button>
+          <h2 style={{ margin: 0, fontWeight: 700 }}>Add apps</h2>
+          <div style={{ width: 120 }} /> {/* spacer */}
+        </div>
+
+        <div className="au-card" style={{ padding: 12 }}>
+          <div className="au-controls">
+            <div className="au-controls__group au-controls__grow">
               <label className="au-note">Search catalog</label>
               <input
                 className="au-input"
                 placeholder="Search all available apps…"
-                value={catalogSearch}
-                onChange={(e)=>setCatalogSearch(e.target.value)}
+                value={q}
+                onChange={(e)=>{ setQ(e.target.value); setPage(1); }}
               />
             </div>
-
-            <div className="apps-grid apps-grid--4">
-              {availableFiltered.map(app => (
-                <div key={app.id} className="app-tile">
-                  <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                    <div className="app-icon" aria-hidden="true">
-                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                    </div>
-                    <div className="app-name" title={app.name}>{app.name}</div>
-                  </a>
-                  <div className="app-actions">
-                    <button className="au-btn au-btn-primary" onClick={()=>addApp(app)}>Add</button>
-                  </div>
-                </div>
-              ))}
-              {availableFiltered.length === 0 && (
-                <div className="au-note" style={{ padding:12 }}>No apps found.</div>
-              )}
+            <div className="au-controls__group">
+              <label className="au-note">Results</label>
+              <div className="au-subtle">{filtered.length}</div>
             </div>
           </div>
         </div>
-      )}
+
+        <div className="apps-grid apps-grid--4">
+          {slice.map(app => {
+            const added = myIds.has(app.id);
+            return (
+              <div key={app.id} className="app-tile">
+                <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
+                  <div className="app-icon" aria-hidden="true">
+                    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                  </div>
+                  <div className="app-name" title={app.name}>{app.name}</div>
+                </a>
+                <div className="app-actions">
+                  <button
+                    className="au-btn au-btn-primary"
+                    onClick={()=>!added && addApp(app)}
+                    disabled={added}
+                    title={added ? "Already added" : "Add this app"}
+                  >
+                    {added ? "Added" : "Add"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {slice.length === 0 && (
+            <div className="au-note" style={{ padding:12 }}>No apps found.</div>
+          )}
+        </div>
+
+        {hasMore && (
+          <div style={{ display:"grid", placeItems:"center" }}>
+            <button className="au-btn au-btn-secondary" onClick={()=>setPage(p=>p+1)}>Load more</button>
+          </div>
+        )}
+      </div>
     </Shell>
   );
 }
+
 
 /* ================== App (Router + Supabase Auth) ================== */
 function App(){
@@ -516,6 +564,27 @@ function App(){
   const [me, setMe] = useState(null);
   const [catalog, setCatalog] = useState([]);   // full apps list from Supabase
   const [myApps, setMyApps] = useState([]);     // the user’s selected apps
+
+    async function addApp(app) {
+    try {
+      const { error } = await supabase.from("user_apps").insert({ user_id: me.id, app_id: app.id });
+      if (error) throw error;
+      setMyApps(prev => (prev.some(p => p.id === app.id) ? prev : [...prev, app]));
+    } catch (e) { console.error(e); alert("Could not add app: " + (e.message || e)); }
+  }
+
+  async function removeApp(app) {
+    try {
+      const { error } = await supabase.from("user_apps")
+        .delete()
+        .eq("user_id", me.id)
+        .eq("app_id", app.id);
+      if (error) throw error;
+      setMyApps(prev => prev.filter(p => p.id !== app.id));
+      // also clear any local folder assignment for that app
+      // (we keep prefs in localStorage inside DashboardPage)
+    } catch (e) { console.error(e); alert("Could not remove app: " + (e.message || e)); }
+  }
 
   // Initial session check + sliding window + load apps
   useEffect(()=>{
@@ -739,24 +808,37 @@ function App(){
   }
 
   // ---- Router
-  if (route === "loading")
-    return <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>Loading…</div>;
-
-  if (route === "login")
+    if (route === "login")
     return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={handleLogout} />;
 
   if (route === "signup")
     return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
 
-  return <DashboardPage
-    me={me}
-    route={route}
-    onLogout={handleLogout}
-    catalog={catalog}
-    myApps={myApps}
-    setMyApps={setMyApps}
-  />;
-}
+  if (route === "catalog")
+    return (
+      <CatalogPage
+        route={route}
+        onBack={()=>setRoute("dashboard")}
+        catalog={catalog}
+        myApps={myApps}
+        addApp={addApp}
+      />
+    );
+
+  return (
+    <DashboardPage
+      me={me}
+      route={route}
+      onLogout={handleLogout}
+      catalog={catalog}
+      myApps={myApps}
+      setMyApps={setMyApps}
+      goCatalog={()=>setRoute("catalog")}
+      addApp={addApp}
+      removeApp={removeApp}
+    />
+  );
+
 
 /* ================== Mount ================== */
 ReactDOM.createRoot(document.getElementById("auth-root")).render(
