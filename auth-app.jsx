@@ -389,8 +389,14 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
             <div key={app.id} className="app-tile">
               <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
                 <div className="app-icon" aria-hidden="true">
-                  <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                </div>
+  {app.logo_url ? (
+    <img className="app-icon__img" src={app.logo_url} alt="" loading="lazy"
+         onError={(e)=>{ e.currentTarget.style.display='none'; }} />
+  ) : (
+    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+  )}
+</div>
+
                 <div className="app-name" title={app.name}>{app.name}</div>
               </a>
               <div className="app-actions au-row-between">
@@ -477,8 +483,14 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
               <div key={app.id} className="app-tile">
                 <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
                   <div className="app-icon" aria-hidden="true">
-                    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                  </div>
+  {app.logo_url ? (
+    <img className="app-icon__img" src={app.logo_url} alt="" loading="lazy"
+         onError={(e)=>{ e.currentTarget.style.display='none'; }} />
+  ) : (
+    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+  )}
+</div>
+
                   <div className="app-name" title={app.name}>{app.name}</div>
                 </a>
                 <div className="app-actions">
