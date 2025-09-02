@@ -248,22 +248,15 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   const appsInView = myApps.filter(a => activeFolder === "all" ? true : appFolders[a.id] === activeFolder);
   const s = search.trim().toLowerCase();
   let filteredApps = !s ? appsInView : appsInView.filter(a =>
-  a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
-);
+    a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
+  );
 
-filteredApps = [...filteredApps].sort((a, b) => {
-  if (sortOrder === "az") return a.name.localeCompare(b.name);
-  if (sortOrder === "za") return b.name.localeCompare(a.name);
-  return 0;
-});
-
-
-// Sort alphabetically
-filteredApps = [...filteredApps].sort((a, b) => {
-  if (sortOrder === "az") return a.name.localeCompare(b.name);
-  if (sortOrder === "za") return b.name.localeCompare(a.name);
-  return 0;
-});
+  // Sort alphabetically (once)
+  filteredApps = [...filteredApps].sort((a, b) => {
+    if (sortOrder === "az") return a.name.localeCompare(b.name);
+    if (sortOrder === "za") return b.name.localeCompare(a.name);
+    return 0;
+  });
 
   // Grid size
   function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
@@ -318,64 +311,63 @@ filteredApps = [...filteredApps].sort((a, b) => {
         {/* Controls row */}
         <div className="au-card" style={{ padding: 12 }}>
           <div className="au-controls">
-  {/* Folder filter */}
-  <div className="au-controls__group">
-    <label className="au-note">Folder</label>
-    <select
-      className="au-input au-select"
-      value={activeFolder}
-      onChange={(e)=>setActiveFolder(e.target.value)}
-    >
-      <option value="all">All</option>
-      {folders.map(f => (
-        <option key={f.id} value={f.id}>{f.name}</option>
-      ))}
-    </select>
-  </div>
+            {/* Folder filter */}
+            <div className="au-controls__group">
+              <label className="au-note">Folder</label>
+              <select
+                className="au-input au-select"
+                value={activeFolder}
+                onChange={(e)=>setActiveFolder(e.target.value)}
+              >
+                <option value="all">All</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
 
-  {/* Size switcher */}
-  <div className="au-controls__group">
-    <label className="au-note">Size</label>
-    <div className="au-seg">
-      <button
-        className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
-        onClick={()=>setGrid("5")}
-        title="5 apps across"
-      >5x♾️</button>
-      <button
-        className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
-        onClick={()=>setGrid("4")}
-        title="4 apps across"
-      >4x♾️</button>
-    </div>
-  </div>
+            {/* Size switcher */}
+            <div className="au-controls__group">
+              <label className="au-note">Size</label>
+              <div className="au-seg">
+                <button
+                  className={`au-seg__btn ${prefs.grid === "5" ? "is-active":""}`}
+                  onClick={()=>setGrid("5")}
+                  title="5 apps across"
+                >5x♾️</button>
+                <button
+                  className={`au-seg__btn ${prefs.grid === "4" ? "is-active":""}`}
+                  onClick={()=>setGrid("4")}
+                  title="4 apps across"
+                >4x♾️</button>
+              </div>
+            </div>
 
-  {/* Search (smaller) */}
-  <div className="au-controls__group au-controls__search">
-    <label className="au-note">Search</label>
-    <input
-      className="au-input"
-      placeholder="Find an app…"
-      value={search}
-      onChange={(e)=>setSearch(e.target.value)}
-    />
-  </div>
+            {/* Search (smaller) */}
+            <div className="au-controls__group au-controls__search">
+              <label className="au-note">Search</label>
+              <input
+                className="au-input"
+                placeholder="Find an app…"
+                value={search}
+                onChange={(e)=>setSearch(e.target.value)}
+              />
+            </div>
 
-  {/* Sort (A→Z / Z→A) */}
-  <div className="au-controls__group">
-    <label className="au-note">Sort</label>
-    <select
-      className="au-input au-select"
-      value={sortOrder}
-      onChange={(e)=>setSortOrder(e.target.value)}
-    >
-      <option value="az">A → Z</option>
-      <option value="za">Z → A</option>
-    </select>
-  </div>
-</div>
-
-
+            {/* Sort (A→Z / Z→A) */}
+            <div className="au-controls__group">
+              <label className="au-note">Sort</label>
+              <select
+                className="au-input au-select"
+                value={sortOrder}
+                onChange={(e)=>setSortOrder(e.target.value)}
+              >
+                <option value="az">A → Z</option>
+                <option value="za">Z → A</option>
+              </select>
+            </div>
+          </div>
+        </div> {/* ← close the controls au-card properly */}
 
         {/* Folders manager */}
         <div className="au-card" style={{ padding: 14 }}>
@@ -418,14 +410,18 @@ filteredApps = [...filteredApps].sort((a, b) => {
             <div key={app.id} className="app-tile">
               <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
                 <div className="app-icon" aria-hidden="true">
-  {app.logo_url ? (
-    <img className="app-icon__img" src={app.logo_url} alt="" loading="lazy"
-         onError={(e)=>{ e.currentTarget.style.display='none'; }} />
-  ) : (
-    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-  )}
-</div>
-
+                  {app.logo_url ? (
+                    <img
+                      className="app-icon__img"
+                      src={app.logo_url}
+                      alt=""
+                      loading="lazy"
+                      onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                    />
+                  ) : (
+                    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                  )}
+                </div>
                 <div className="app-name" title={app.name}>{app.name}</div>
               </a>
               <div className="app-actions au-row-between">
@@ -512,14 +508,18 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
               <div key={app.id} className="app-tile">
                 <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
                   <div className="app-icon" aria-hidden="true">
-  {app.logo_url ? (
-    <img className="app-icon__img" src={app.logo_url} alt="" loading="lazy"
-         onError={(e)=>{ e.currentTarget.style.display='none'; }} />
-  ) : (
-    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-  )}
-</div>
-
+                    {app.logo_url ? (
+                      <img
+                        className="app-icon__img"
+                        src={app.logo_url}
+                        alt=""
+                        loading="lazy"
+                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                      />
+                    ) : (
+                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                    )}
+                  </div>
                   <div className="app-name" title={app.name}>{app.name}</div>
                 </a>
                 <div className="app-actions">
@@ -608,8 +608,7 @@ function App(){
 
       // catalog + my apps
       const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
-.eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -706,8 +705,7 @@ function App(){
       }
 
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
-.eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -766,7 +764,6 @@ function App(){
       if (defErr) console.warn("defaults load warning:", defErr.message);
 
       if (defaults?.length) {
-        // Use insert; duplicates are unlikely immediately after signup
         const { error: insertErr } = await supabase
           .from("user_apps")
           .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
@@ -777,8 +774,7 @@ function App(){
 
       // Load catalog & my apps after signup
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url")
-.eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
