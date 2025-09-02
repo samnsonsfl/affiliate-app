@@ -234,6 +234,10 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
   const [activeFolder, setActiveFolder] = React.useState("all"); // "all" or folderId
   const [newFolderName, setNewFolderName] = React.useState("");
 
+  // add-app modal
+  const [showCatalog, setShowCatalog] = React.useState(false);
+  const [catalogSearch, setCatalogSearch] = React.useState("");
+
   useEffect(()=> { savePrefs(prefs); }, [prefs]);
 
   const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
@@ -242,16 +246,17 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
   const folders = prefs.folders;
   const appFolders = prefs.appFolders;
 
-  // Filter by folder then by search
+  // Filter by folder then by search (for user's apps)
   const appsInView = myApps.filter(a => activeFolder === "all" ? true : appFolders[a.id] === activeFolder);
   const s = search.trim().toLowerCase();
   const filteredApps = !s ? appsInView : appsInView.filter(a =>
     a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
   );
 
-  // Actions
+  // Grid size
   function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
 
+  // Folder ops
   function addFolder() {
     const name = newFolderName.trim();
     if (!name) return;
@@ -260,14 +265,12 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
     setNewFolderName("");
     setActiveFolder(id);
   }
-
   function renameFolder(id, name) {
     setPrefs(p => ({
       ...p,
       folders: p.folders.map(f => f.id === id ? { ...f, name: name.trim() || f.name } : f)
     }));
   }
-
   function deleteFolder(id) {
     setPrefs(p => {
       const nextFolders = p.folders.filter(f => f.id !== id);
@@ -277,7 +280,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
     });
     if (activeFolder === id) setActiveFolder("all");
   }
-
   function assignAppToFolder(appId, folderId) {
     setPrefs(p => {
       const next = { ...p.appFolders };
@@ -287,15 +289,61 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
     });
   }
 
+  // ====== Add/Remove (persisted in Supabase user_apps) ======
+  async function addApp(app) {
+    try {
+      const { error } = await supabase.from("user_apps").insert({ user_id: me.id, app_id: app.id });
+      if (error) throw error;
+      // update local state
+      setMyApps(prev => {
+        if (prev.some(p => p.id === app.id)) return prev;
+        return [...prev, app];
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Could not add app: " + (e.message || e));
+    }
+  }
+  async function removeApp(app) {
+    try {
+      const { error } = await supabase.from("user_apps")
+        .delete()
+        .eq("user_id", me.id)
+        .eq("app_id", app.id);
+      if (error) throw error;
+      setMyApps(prev => prev.filter(p => p.id !== app.id));
+      // also drop folder assignment
+      setPrefs(p => {
+        const next = { ...p.appFolders };
+        delete next[app.id];
+        return { ...p, appFolders: next };
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Could not remove app: " + (e.message || e));
+    }
+  }
+
+  // For catalog modal: available = catalog - myApps
+  const myIds = new Set(myApps.map(a => a.id));
+  const available = catalog.filter(a => a.is_active && !myIds.has(a.id));
+  const cs = catalogSearch.trim().toLowerCase();
+  const availableFiltered = !cs ? available : available.filter(a =>
+    a.name.toLowerCase().includes(cs) || (a.description || "").toLowerCase().includes(cs)
+  );
+
   return (
     <Shell route={route} onLogout={onLogout}>
       <div className="au-grid" style={{ gap: 24 }}>
-        {/* Greeting */}
-        <div>
-          <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
-            Welcome{firstName ? `, ${firstName}` : ""} 👋
-          </h2>
-          <div className="au-note">Your apps are below. Use search, size, and folders to organize.</div>
+        {/* Greeting + Add App */}
+        <div className="au-row-between">
+          <div>
+            <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
+              Welcome{firstName ? `, ${firstName}` : ""} 👋
+            </h2>
+            <div className="au-note">Your apps are below. Use search, size, and folders to organize.</div>
+          </div>
+          <button className="au-btn au-btn-primary" onClick={()=>setShowCatalog(true)}>Add app</button>
         </div>
 
         {/* Controls row */}
@@ -391,7 +439,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
                 </div>
                 <div className="app-name" title={app.name}>{app.name}</div>
               </a>
-              <div className="app-actions">
+              <div className="app-actions au-row-between">
                 <select
                   className="au-input au-select au-select--mini"
                   value={appFolders[app.id] || "none"}
@@ -403,6 +451,9 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
                     <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
                 </select>
+                <button className="au-btn au-btn-secondary" onClick={()=>removeApp(app)} title="Remove app">
+                  Remove
+                </button>
               </div>
             </div>
           ))}
@@ -411,6 +462,47 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps }) {
           )}
         </div>
       </div>
+
+      {/* ===== Add App Modal ===== */}
+      {showCatalog && (
+        <div className="au-modal">
+          <div className="au-modal__scrim" onClick={()=>setShowCatalog(false)} />
+          <div className="au-modal__panel">
+            <div className="au-row-between" style={{ marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>Add apps</h3>
+              <button className="au-btn au-btn-secondary" onClick={()=>setShowCatalog(false)}>Close</button>
+            </div>
+            <div className="au-controls__group" style={{ marginBottom: 12 }}>
+              <label className="au-note">Search catalog</label>
+              <input
+                className="au-input"
+                placeholder="Search all available apps…"
+                value={catalogSearch}
+                onChange={(e)=>setCatalogSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="apps-grid apps-grid--4">
+              {availableFiltered.map(app => (
+                <div key={app.id} className="app-tile">
+                  <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
+                    <div className="app-icon" aria-hidden="true">
+                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                    </div>
+                    <div className="app-name" title={app.name}>{app.name}</div>
+                  </a>
+                  <div className="app-actions">
+                    <button className="au-btn au-btn-primary" onClick={()=>addApp(app)}>Add</button>
+                  </div>
+                </div>
+              ))}
+              {availableFiltered.length === 0 && (
+                <div className="au-note" style={{ padding:12 }}>No apps found.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Shell>
   );
 }
