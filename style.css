@@ -251,3 +251,59 @@ p{ color: var(--muted); }
   padding:6px 8px; border-radius:10px; font-size:.9rem; width:auto;
 }
 
+/* Controls bar */
+.au-controls {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.au-controls__group { display: flex; flex-direction: column; gap: 6px; }
+.au-controls__grow { flex: 1 1 260px; }
+
+.au-seg { display: inline-flex; background: rgba(255,255,255,.08); border-radius: 12px; padding: 2px; }
+.au-seg__btn {
+  border: 0; background: transparent; color: #fff; padding: 6px 10px; border-radius: 10px; cursor: pointer;
+}
+.au-seg__btn.is-active { background: rgba(255,255,255,.16); }
+
+/* Folders UI */
+.au-folderchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px; padding: 4px 8px;
+}
+.au-folderchip__name {
+  background: transparent; border: 0; color: #fff; width: 130px; outline: none;
+}
+.au-folderchip__x {
+  border: 0; background: transparent; color: #fff; opacity: .8; cursor: pointer; font-size: 16px;
+}
+
+/* Phone-style app grid */
+.apps-grid {
+  display: grid; gap: 14px;
+}
+.apps-grid--5 { grid-template-columns: repeat(5, minmax(0,1fr)); }
+.apps-grid--4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+
+/* Individual tile sized like phone icons */
+.app-tile {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  padding: 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.app-body { text-decoration: none; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.app-icon {
+  width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+}
+.app-letter { font-weight: 700; font-size: 20px; }
+.app-name {
+  font-size: 12px; line-height: 1.2; text-align: center; max-width: 100%;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.app-actions { width: 100%; }
+.au-select--mini { padding: 4px 8px; font-size: 12px; }
