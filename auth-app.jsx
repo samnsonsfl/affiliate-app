@@ -108,18 +108,12 @@ function filenameGuesses(name) {
   return Array.from(new Set(list));
 }
 
-/* ================== AppIcon (static GitHub/Netlify) ================== */
+/* ================== AppIcon (use Supabase icon_url) ================== */
 function AppIcon({ app, size = 54, radius = 14 }) {
   const [broken, setBroken] = React.useState(false);
+  const src = app?.icon_url;
 
-  // Build the static file path from the app name
-  const safeName = (app?.name || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-"); // sanitize → lowercase + dashes
-
-  const src = `/app-logos/${safeName}.png`;
-
-  if (broken || !app?.name) {
+  if (broken || !src) {
     return (
       <div
         className="app-icon"
@@ -154,7 +148,7 @@ function AppIcon({ app, size = 54, radius = 14 }) {
     >
       <img
         src={src}
-        alt=""
+        alt={app?.name || ""}
         loading="lazy"
         onError={() => setBroken(true)}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
