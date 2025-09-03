@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United (stable logos + robust fallback) */
+/* auth-app.jsx — Apps-United (icon_url-first, robust favicon fallback) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, Component } = React;
 
@@ -50,7 +50,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-/* ================== Sliding 30-day helpers ================== */
+/* ================== 30-day sliding window ================== */
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const LS_LAST_ACTIVE = "appsUnited.lastActive";
 function getLastActive(){ try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); } catch { return 0; } }
@@ -61,17 +61,10 @@ function isWithinThirtyDays(){
   return (Date.now() - last) < THIRTY_DAYS;
 }
 
-/* ---------- Dashboard prefs ---------- */
+/* ================== Local prefs ================== */
 const LS_PREFS = "appsUnited.prefs";
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; } }
 function savePrefs(p) { try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {} }
-/* Shape:
-{
-  grid: "6" | "5" | "4",
-  folders: [{ id, name }],
-  appFolders: { [appId]: folderId }
-}
-*/
 function ensurePrefsShape(p) {
   const allowed = new Set(["4","5","6"]);
   return {
@@ -82,7 +75,20 @@ function ensurePrefsShape(p) {
 }
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
-/* ================== UI shell ================== */
+/* ================== Helpers ================== */
+function googleFaviconFromHref(href) {
+  try {
+    const host = new URL(href).hostname;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
+  } catch {
+    return "";
+  }
+}
+function getIcon(app) {
+  return app.icon_url || app.logo_url || googleFaviconFromHref(app.href);
+}
+
+/* ================== Shell ================== */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container" data-route={route}>
@@ -104,7 +110,6 @@ function Shell({ route, onLogout, children }) {
     </div>
   );
 }
-
 function ErrorNote({ children }) {
   return (
     <div className="au-card" style={{
@@ -112,30 +117,6 @@ function ErrorNote({ children }) {
       padding: 12, marginBottom: 8
     }}>
       <span>⚠️</span> <span style={{ marginLeft: 8 }}>{children}</span>
-    </div>
-  );
-}
-
-/* ================== Robust icon with fallback ================== */
-function AppIcon({ app }) {
-  const [failed, setFailed] = useState(false);
-  const src = failed ? "" : (app?.icon_url || app?.logo_url || "");
-  const letter = (app?.name || "?").slice(0,1);
-
-  return (
-    <div className="app-icon" aria-hidden="true">
-      {src ? (
-        <img
-          className="app-icon__img"
-          src={src}
-          alt=""
-          loading="lazy"
-          onError={() => setFailed(true)}
-          referrerPolicy="no-referrer"
-        />
-      ) : (
-        <span className="app-letter">{letter}</span>
-      )}
     </div>
   );
 }
@@ -273,7 +254,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   useEffect(()=> { savePrefs(prefs); }, [prefs]);
 
   const firstName = (me?.full_name || me?.fullName || "").split(" ")[0] || "";
-
   const folders = prefs.folders;
   const appFolders = prefs.appFolders;
 
@@ -282,7 +262,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   let filteredApps = !s ? appsInView : appsInView.filter(a =>
     a.name.toLowerCase().includes(s) || (a.description || "").toLowerCase().includes(s)
   );
-
   filteredApps = [...filteredApps].sort((a, b) => {
     if (sortOrder === "az") return a.name.localeCompare(b.name);
     if (sortOrder === "za") return b.name.localeCompare(a.name);
@@ -290,7 +269,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   });
 
   function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
-
   function addFolder() {
     const name = newFolderName.trim();
     if (!name) return;
@@ -338,7 +316,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
 
         <div className="au-card" style={{ padding: 12 }}>
           <div className="au-controls">
-            {/* Folder */}
             <div className="au-controls__group">
               <label className="au-note">Folder</label>
               <select
@@ -353,7 +330,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
               </select>
             </div>
 
-            {/* Size */}
             <div className="au-controls__group">
               <label className="au-note">Size</label>
               <div className="au-seg">
@@ -363,7 +339,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
               </div>
             </div>
 
-            {/* Sort */}
             <div className="au-controls__group">
               <label className="au-note">Sort</label>
               <select
@@ -376,7 +351,6 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
               </select>
             </div>
 
-            {/* Search */}
             <div className="au-controls__group au-controls__search">
               <label className="au-note">Search</label>
               <input
@@ -389,71 +363,50 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
           </div>
         </div>
 
-        {/* Folders manager */}
-        <div className="au-card" style={{ padding: 14 }}>
-          <div className="au-row-between" style={{ alignItems:"flex-start" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {folders.length === 0 ? (
-                <div className="au-note">No folders yet.</div>
-              ) : (
-                folders.map(f => (
-                  <div key={f.id} className="au-folderchip">
-                    <input
-                      className="au-folderchip__name"
-                      value={f.name}
-                      onChange={(e)=>renameFolder(f.id, e.target.value)}
-                    />
-                    <button className="au-folderchip__x" onClick={()=>deleteFolder(f.id)} title="Delete">×</button>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="au-row" style={{ gap:8 }}>
-              <input
-                className="au-input"
-                placeholder="New folder name"
-                value={newFolderName}
-                onChange={(e)=>setNewFolderName(e.target.value)}
-                style={{ width: 220 }}
-              />
-              <button className="au-btn au-btn-primary" onClick={addFolder}>Add Folder</button>
-            </div>
-          </div>
-          <div className="au-note" style={{ marginTop: 8 }}>
-            Tip: move any app using the dropdown on its card.
-          </div>
-        </div>
-
-        {/* Apps grid */}
         <div className={`apps-grid ${
           prefs.grid === "6" ? "apps-grid--6"
           : prefs.grid === "4" ? "apps-grid--4"
           : "apps-grid--5"
         }`}>
-          {filteredApps.map(app => (
-            <div key={app.id} className="app-tile">
-              <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                <AppIcon app={app} />
-                <div className="app-name" title={app.name}>{app.name}</div>
-              </a>
-              <div className="app-actions au-row-between">
-                <select
-                  className="au-input au-select au-select--mini"
-                  value={appFolders[app.id] || "none"}
-                  onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
-                  title="Move to folder"
-                >
-                  <option value="none">No folder</option>
-                  {folders.map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-                <button className="au-btn au-btn-secondary" onClick={()=>removeApp(app)} title="Remove app">
-                  Remove
-                </button>
+          {filteredApps.map(app => {
+            const icon = getIcon(app);
+            return (
+              <div key={app.id} className="app-tile">
+                <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
+                  <div className="app-icon" aria-hidden="true">
+                    {icon ? (
+                      <img
+                        className="app-icon__img"
+                        src={icon}
+                        alt=""
+                        loading="lazy"
+                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                      />
+                    ) : (
+                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                    )}
+                  </div>
+                  <div className="app-name" title={app.name}>{app.name}</div>
+                </a>
+                <div className="app-actions au-row-between">
+                  <select
+                    className="au-input au-select au-select--mini"
+                    value={appFolders[app.id] || "none"}
+                    onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
+                    title="Move to folder"
+                  >
+                    <option value="none">No folder</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                  <button className="au-btn au-btn-secondary" onClick={()=>removeApp(app)} title="Remove app">
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {filteredApps.length === 0 && (
             <div className="au-note" style={{ padding:12 }}>No apps match your search or folder.</div>
           )}
@@ -514,10 +467,23 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
         <div className="apps-grid apps-grid--4">
           {slice.map(app => {
             const added = myIds.has(app.id);
+            const icon = getIcon(app);
             return (
               <div key={app.id} className="app-tile">
                 <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                  <AppIcon app={app} />
+                  <div className="app-icon" aria-hidden="true">
+                    {icon ? (
+                      <img
+                        className="app-icon__img"
+                        src={icon}
+                        alt=""
+                        loading="lazy"
+                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
+                      />
+                    ) : (
+                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
+                    )}
+                  </div>
                   <div className="app-name" title={app.name}>{app.name}</div>
                 </a>
                 <div className="app-actions">
@@ -577,7 +543,6 @@ function App(){
     } catch (e) { console.error(e); alert("Could not remove app: " + (e.message || e)); }
   }
 
-  // Initial session check + sliding window + load apps
   useEffect(()=>{
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -598,38 +563,34 @@ function App(){
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
-      if (profErr) console.warn("profiles warning:", profErr?.message);
+      if (profErr) console.warn("profiles warning:", profErr.message);
 
       const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-        supabase.from("apps")
-          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
-          .eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url,icon_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
-      if (appsErr) console.warn("apps load warning:", appsErr?.message);
-      if (rowsErr) console.warn("user_apps load warning:", rowsErr?.message);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rowsErr) console.warn("user_apps load warning:", rowsErr.message);
 
       if (!rows || rows.length === 0) {
         const { data: defaults, error: defErr } = await supabase
-          .from("apps")
-          .select("id")
-          .eq("is_default", true);
-        if (defErr) console.warn("defaults warning:", defErr?.message);
+          .from("apps").select("id").eq("is_default", true);
+        if (defErr) console.warn("defaults warning:", defErr.message);
 
         if (defaults?.length) {
           const { error: insertErr } = await supabase
             .from("user_apps")
             .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
-          if (insertErr) console.warn("user_apps insert warning:", insertErr?.message);
+          if (insertErr) console.warn("user_apps insert warning:", insertErr.message);
 
           const { data: rows2, error: rows2Err } =
             await supabase.from("user_apps").select("app_id").eq("user_id", user.id);
-          if (rows2Err) console.warn("user_apps reload warning:", rows2Err?.message);
+          if (rows2Err) console.warn("user_apps reload warning:", rows2Err.message);
 
           const mySet2 = new Set((rows2 || []).map(r => r.app_id));
           setCatalog(apps || []);
           setMyApps((apps || []).filter(a => mySet2.has(a.id)));
-        } else {
+      } else {
           const mySet = new Set((rows || []).map(r => r.app_id));
           setCatalog(apps || []);
           setMyApps((apps || []).filter(a => mySet.has(a.id)));
@@ -650,7 +611,6 @@ function App(){
     return () => { sub.subscription.unsubscribe(); };
   },[]);
 
-  // Login
   async function handleLogin(e){
     e.preventDefault(); setErr("");
     try {
@@ -661,7 +621,6 @@ function App(){
       if (error) throw error;
 
       const user = data.user;
-
       bumpLastActive();
       if (!loginForm.stay) {
         window.addEventListener("beforeunload", () => {
@@ -674,17 +633,15 @@ function App(){
         .select("full_name, opt_in")
         .eq("id", user.id)
         .maybeSingle();
-      if (profErr) console.warn("profiles warning:", profErr?.message);
+      if (profErr) console.warn("profiles warning:", profErr.message);
 
-      // IMPORTANT: include icon_url here too
+      // ⬇️ IMPORTANT: include icon_url here
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps")
-          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
-          .eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url,icon_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
-      if (appsErr) console.warn("apps load warning:", appsErr?.message);
-      if (rows2Err) console.warn("user_apps reload warning:", rows2Err?.message);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rows2Err) console.warn("user_apps reload warning:", rows2Err.message);
 
       const mySet = new Set((rows2 || []).map(r => r.app_id));
       setCatalog(apps || []);
@@ -698,11 +655,9 @@ function App(){
     }
   }
 
-  // Signup
   async function handleSignup(e){
     e.preventDefault();
     setErr("");
-
     try {
       const { fullName, email, password, confirm, agree, optIn } = signupForm;
 
@@ -732,29 +687,15 @@ function App(){
         full_name: fullName.trim(),
         opt_in: !!optIn
       });
-      if (profileErr) console.warn("profiles upsert warning:", profileErr?.message);
+      if (profileErr) console.warn("profiles upsert warning:", profileErr.message);
 
-      const { data: defaults, error: defErr } =
-        await supabase.from("apps").select("id").eq("is_default", true);
-      if (defErr) console.warn("defaults load warning:", defErr?.message);
-
-      if (defaults?.length) {
-        const { error: insertErr } = await supabase
-          .from("user_apps")
-          .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
-        if (insertErr) console.warn("user_apps insert warning:", insertErr?.message);
-      }
-
-      bumpLastActive();
-
+      // Already had icon_url here, keeping it
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps")
-          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
-          .eq("is_active", true),
+        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url,icon_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
-      if (appsErr) console.warn("apps load warning:", appsErr?.message);
-      if (rows2Err) console.warn("user_apps load warning:", rows2Err?.message);
+      if (appsErr) console.warn("apps load warning:", appsErr.message);
+      if (rows2Err) console.warn("user_apps load warning:", rows2Err.message);
 
       setMe({ id: user.id, email: user.email, full_name: fullName.trim() });
       const mySet = new Set((rows2 || []).map(r => r.app_id));
@@ -767,14 +708,6 @@ function App(){
     }
   }
 
-  // Logout
-  async function handleLogout(){
-    await supabase.auth.signOut();
-    try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
-    setMe(null); setRoute("login");
-  }
-
-  // Router
   if (route === "loading") {
     return (
       <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>
@@ -784,10 +717,10 @@ function App(){
   }
 
   if (route === "login")
-    return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={handleLogout} />;
+    return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={async()=>{ await supabase.auth.signOut(); setMe(null); setRoute("login"); }} />;
 
   if (route === "signup")
-    return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
+    return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={async()=>{ await supabase.auth.signOut(); setMe(null); setRoute("login"); }} />;
 
   if (route === "catalog")
     return (
@@ -804,7 +737,7 @@ function App(){
     <DashboardPage
       me={me}
       route={route}
-      onLogout={handleLogout}
+      onLogout={async()=>{ await supabase.auth.signOut(); try{ localStorage.removeItem(LS_LAST_ACTIVE);}catch{}; setMe(null); setRoute("login"); }}
       catalog={catalog}
       myApps={myApps}
       setMyApps={setMyApps}
