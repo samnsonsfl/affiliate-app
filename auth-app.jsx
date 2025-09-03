@@ -1,10 +1,11 @@
-/* auth-app.jsx — Apps-United (icon_url-first, robust favicon fallback) */
+/* auth-app.jsx — Apps-United (resilient icons + Supabase + search/folders/sort + 4x/5x/6x) */
 /* global React, ReactDOM, window */
-const { useState, useEffect, Component } = React;
+const { useState, useEffect, useMemo, useRef, Component } = React;
 
 /* ================== Supabase config ================== */
 const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
+const PUBLIC_BUCKET = "app-logos"; // <- your bucket
 
 function bailHard(msg) {
   const el = document.getElementById("auth-root");
@@ -21,14 +22,145 @@ function bailHard(msg) {
   }
   throw new Error(msg);
 }
-
 if (!window.supabase || typeof window.supabase.createClient !== "function") {
   bailHard("Supabase client script missing.");
 }
-
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
 });
+
+/* ================== Little utils ================== */
+const AFFIL_HOSTS = new Set([
+  "amzn.to","sjv.io","prf.hn","pxf.io","vkuz.net","jyeh.net","jewn.net","ijrn.net",
+  "hmxg.net","gqco.net","eyjo.net","elfm.net","tcux.net","mtko.net","prf.hn"
+]);
+
+function getHostname(href="") {
+  try { return new URL(href).hostname; } catch { return ""; }
+}
+
+// If the href is an affiliate host, skip trying a favicon and rely on bucket or icon_url.
+function getFaviconURLFromHref(href="") {
+  const host = getHostname(href);
+  if (!host || AFFIL_HOSTS.has(host)) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+}
+
+// Some of your files don’t match the app name exactly. Hard overrides here:
+const OVERRIDES = {
+  "Hellotickets": "hellotickets.jpeg",
+  "Pangel": "Pangel.JPG",
+  "Air France & KLM (Points)": "Flying Blue.JPG",
+  "Bio Renewal USA": "Bio Renewal.jpeg",
+  "Etihad (Points)": "Ethiad.JPG",
+  "Hyatt (Points)": "Hyatt .JPG",
+  "AirAsia": "Air Asia.JPG",
+  "Alaska Airlines (Points)": "Alaska Airlines.JPG",
+  "Marriott Bonvoy (Points)": "marriott.jpeg",
+  "Amazon Audible": "Amazon Audible.jpeg",
+  "Amazon Kindle": "Amazon Kindle.jpeg",
+  "Amazon Music": "Amazon Music1.jpeg",
+  "Amazon Prime Video": "Amazon Prime Video.jpeg",
+  "Amazon Fresh": "Amazon Fresh.jpeg",
+  "Amazon Baby Registry": "Amazon Baby Registry.JPG",
+  "Amazon Wedding Registry": "amazon.jpeg",
+  "Amazon EBT": "amazon.jpeg",
+  "Amazon Games": "amazon.jpeg",
+  "Amazon Pets": "amazon.jpeg",
+  "Niccolo Hotels": "Niccolo Hotels.jpeg",
+  "Marco Polo Hotels": "Marco Pollo.jpeg",
+  "Tahiti Village": "Tahiti Village.jpeg",
+  "PetPlace": "PetPlace.jpeg",
+  "Smalls": "smalls.jpeg",
+  "Optimeal": "optimeal.jpeg",
+  "PAW": "PAW.jpeg",
+  "Points Yeah": "Points Yeah.jpeg",
+  "Copa Airlines (Points)": "Copa Airlines.jpeg",
+  "United Airlines (Points)": "United Airlines.jpeg",
+  "Southwest Airlines (Points)": "Southwest Airlines.jpeg",
+  "IHG (Points)": "IHG.jpeg",
+  "Hilton (Points)": "Hilton.jpeg",
+  "JetBlue (Points)": "jetblue.jpeg",
+  "Stay": "Stay.jpeg",
+  "SATELLAI": "SATELLAI.jpeg",
+  "AirAsia": "Air Asia.JPG",
+  "Ebay": "Ebay.JPG",
+  "Agoda": "agoda.jpeg",
+  "Viator": "viator.jpeg",
+  "Get Your Guide": "Get Your Guide.jpeg", // just in case you add later
+};
+
+// Build canonical bucket URL
+function bucketURL(filename) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${PUBLIC_BUCKET}/${encodeURIComponent(filename)}`;
+}
+
+// Generate a few filename guesses from the app name
+function filenameGuesses(name) {
+  const base = (name || "").trim();
+  if (!base) return [];
+  const cleanA = base.replace(/[()]/g,"").replace(/\s+/g," ").trim();           // remove parens
+  const cleanB = cleanA.replace(/ & /g," and ");                                 // & → and
+  const variants = [base, cleanA, cleanB];
+  const exts = [".png",".jpg",".jpeg",".JPG",".JPEG"];
+  const list = [];
+  for (const v of variants) for (const e of exts) list.push(`${v}${e}`);
+  return Array.from(new Set(list));
+}
+
+/* ================== Resilient AppIcon component ================== */
+function AppIcon({ app, size=54, radius=14 }) {
+  const [idx, setIdx] = useState(0);
+
+  const candidates = useMemo(() => {
+    const arr = [];
+
+    // 1. Exact fields from DB first
+    if (app?.icon_url) arr.push(app.icon_url);
+    if (app?.logo_url) arr.push(app.logo_url);
+
+    // 2. Known overrides for weird filenames
+    const override = OVERRIDES[app?.name || ""];
+    if (override) arr.push(bucketURL(override));
+
+    // 3. Best-guess filenames in your bucket
+    for (const guess of filenameGuesses(app?.name || "")) {
+      arr.push(bucketURL(guess));
+    }
+
+    // 4. Last-resort favicon (skip affiliate hosts)
+    const fav = getFaviconURLFromHref(app?.href || "");
+    if (fav) arr.push(fav);
+
+    // De-dupe while keeping order
+    return Array.from(new Set(arr));
+  }, [app]);
+
+  // If everything fails, show letter
+  const fallback = (
+    <div className="app-icon" aria-hidden="true" style={{ width:size, height:size, borderRadius:radius }}>
+      <span className="app-letter">{(app?.name || "?").slice(0,1)}</span>
+    </div>
+  );
+
+  if (!candidates.length) return fallback;
+
+  const current = candidates[Math.min(idx, candidates.length - 1)];
+  const isLast = idx >= candidates.length - 1;
+
+  return (
+    <div className="app-icon" aria-hidden="true" style={{ width:size, height:size, borderRadius:radius, overflow:"hidden" }}>
+      <img
+        className="app-icon__img"
+        src={current}
+        alt=""
+        loading="lazy"
+        onError={()=>{ if (!isLast) setIdx(i=>i+1); }}
+        style={{ display:"block", width:"100%", height:"100%", objectFit:"cover" }}
+      />
+    </div>
+  );
+}
 
 /* ================== Error Boundary ================== */
 class ErrorBoundary extends Component {
@@ -50,7 +182,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-/* ================== 30-day sliding window ================== */
+/* ================== Sliding 30-day helpers ================== */
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const LS_LAST_ACTIVE = "appsUnited.lastActive";
 function getLastActive(){ try { return parseInt(localStorage.getItem(LS_LAST_ACTIVE) || "0", 10); } catch { return 0; } }
@@ -61,7 +193,7 @@ function isWithinThirtyDays(){
   return (Date.now() - last) < THIRTY_DAYS;
 }
 
-/* ================== Local prefs ================== */
+/* ---------- Dashboard prefs ---------- */
 const LS_PREFS = "appsUnited.prefs";
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(LS_PREFS) || "{}"); } catch { return {}; } }
 function savePrefs(p) { try { localStorage.setItem(LS_PREFS, JSON.stringify(p)); } catch {} }
@@ -75,24 +207,11 @@ function ensurePrefsShape(p) {
 }
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
-/* ================== Helpers ================== */
-function googleFaviconFromHref(href) {
-  try {
-    const host = new URL(href).hostname;
-    return `https://www.google.com/s2/favicons?domain=${host}&sz=128`;
-  } catch {
-    return "";
-  }
-}
-function getIcon(app) {
-  return app.icon_url || app.logo_url || googleFaviconFromHref(app.href);
-}
-
 /* ================== Shell ================== */
 function Shell({ route, onLogout, children }) {
   return (
     <div className="au-container" data-route={route}>
-      <header className="au-header" style={{ alignItems: "flex-start" }}>
+      <header className="au-header" style={{ alignItems:"flex-start" }}>
         <div className="au-brand" style={{flexDirection:"column", alignItems:"center", textAlign:"center"}}>
           <img src="./favicon-192.png" alt="Apps-United logo" style={{width:64, height:64, borderRadius:16}} />
           <div style={{ marginTop: 6 }}>
@@ -269,6 +388,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
   });
 
   function setGrid(n) { setPrefs(p => ({ ...p, grid: n })); }
+
   function addFolder() {
     const name = newFolderName.trim();
     if (!name) return;
@@ -309,7 +429,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
             <h2 style={{ margin: "0 0 8px", fontWeight: 600, fontSize: 24 }}>
               Welcome{firstName ? `, ${firstName}` : ""} 👋
             </h2>
-            <div className="au-note">Your apps are below. Use search, size, and folders to organize.</div>
+            <div className="au-note">Your apps are below. Use search, size, sort and folders to organize.</div>
           </div>
           <button className="au-btn au-btn-primary" onClick={goCatalog}>Add app</button>
         </div>
@@ -363,50 +483,31 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
           </div>
         </div>
 
-        <div className={`apps-grid ${
-          prefs.grid === "6" ? "apps-grid--6"
-          : prefs.grid === "4" ? "apps-grid--4"
-          : "apps-grid--5"
-        }`}>
-          {filteredApps.map(app => {
-            const icon = getIcon(app);
-            return (
-              <div key={app.id} className="app-tile">
-                <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                  <div className="app-icon" aria-hidden="true">
-                    {icon ? (
-                      <img
-                        className="app-icon__img"
-                        src={icon}
-                        alt=""
-                        loading="lazy"
-                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
-                      />
-                    ) : (
-                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                    )}
-                  </div>
-                  <div className="app-name" title={app.name}>{app.name}</div>
-                </a>
-                <div className="app-actions au-row-between">
-                  <select
-                    className="au-input au-select au-select--mini"
-                    value={appFolders[app.id] || "none"}
-                    onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
-                    title="Move to folder"
-                  >
-                    <option value="none">No folder</option>
-                    {folders.map(f => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
-                  <button className="au-btn au-btn-secondary" onClick={()=>removeApp(app)} title="Remove app">
-                    Remove
-                  </button>
-                </div>
+        <div className={`apps-grid ${prefs.grid === "6" ? "apps-grid--6" : prefs.grid === "4" ? "apps-grid--4" : "apps-grid--5"}`}>
+          {filteredApps.map(app => (
+            <div key={app.id} className="app-tile">
+              <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
+                <AppIcon app={app} />
+                <div className="app-name" title={app.name}>{app.name}</div>
+              </a>
+              <div className="app-actions au-row-between">
+                <select
+                  className="au-input au-select au-select--mini"
+                  value={appFolders[app.id] || "none"}
+                  onChange={(e)=>assignAppToFolder(app.id, e.target.value)}
+                  title="Move to folder"
+                >
+                  <option value="none">No folder</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+                <button className="au-btn au-btn-secondary" onClick={()=>removeApp(app)} title="Remove app">
+                  Remove
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
           {filteredApps.length === 0 && (
             <div className="au-note" style={{ padding:12 }}>No apps match your search or folder.</div>
           )}
@@ -420,6 +521,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
 function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
   const [q, setQ] = React.useState("");
   const myIds = new Set(myApps.map(a => a.id));
+
   const [page, setPage] = React.useState(1);
   const PAGE_SIZE = 48;
 
@@ -443,7 +545,7 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
         <div className="au-row-between">
           <button className="au-btn au-btn-secondary" onClick={onBack}>← Back</button>
           <h2 style={{ margin: 0, fontWeight: 700 }}>Add apps</h2>
-          <div style={{ width: 120 }} />
+          <div style={{ width: 120 }} /> {/* spacer */}
         </div>
 
         <div className="au-card" style={{ padding: 12 }}>
@@ -467,23 +569,10 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
         <div className="apps-grid apps-grid--4">
           {slice.map(app => {
             const added = myIds.has(app.id);
-            const icon = getIcon(app);
             return (
               <div key={app.id} className="app-tile">
                 <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                  <div className="app-icon" aria-hidden="true">
-                    {icon ? (
-                      <img
-                        className="app-icon__img"
-                        src={icon}
-                        alt=""
-                        loading="lazy"
-                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
-                      />
-                    ) : (
-                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                    )}
-                  </div>
+                  <AppIcon app={app} />
                   <div className="app-name" title={app.name}>{app.name}</div>
                 </a>
                 <div className="app-actions">
@@ -531,7 +620,6 @@ function App(){
       setMyApps(prev => (prev.some(p => p.id === app.id) ? prev : [...prev, app]));
     } catch (e) { console.error(e); alert("Could not add app: " + (e.message || e)); }
   }
-
   async function removeApp(app) {
     try {
       const { error } = await supabase.from("user_apps")
@@ -574,7 +662,9 @@ function App(){
 
       if (!rows || rows.length === 0) {
         const { data: defaults, error: defErr } = await supabase
-          .from("apps").select("id").eq("is_default", true);
+          .from("apps")
+          .select("id")
+          .eq("is_default", true);
         if (defErr) console.warn("defaults warning:", defErr.message);
 
         if (defaults?.length) {
@@ -590,7 +680,7 @@ function App(){
           const mySet2 = new Set((rows2 || []).map(r => r.app_id));
           setCatalog(apps || []);
           setMyApps((apps || []).filter(a => mySet2.has(a.id)));
-      } else {
+        } else {
           const mySet = new Set((rows || []).map(r => r.app_id));
           setCatalog(apps || []);
           setMyApps((apps || []).filter(a => mySet.has(a.id)));
@@ -621,6 +711,7 @@ function App(){
       if (error) throw error;
 
       const user = data.user;
+
       bumpLastActive();
       if (!loginForm.stay) {
         window.addEventListener("beforeunload", () => {
@@ -635,7 +726,6 @@ function App(){
         .maybeSingle();
       if (profErr) console.warn("profiles warning:", profErr.message);
 
-      // ⬇️ IMPORTANT: include icon_url here
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url,icon_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
@@ -689,7 +779,18 @@ function App(){
       });
       if (profileErr) console.warn("profiles upsert warning:", profileErr.message);
 
-      // Already had icon_url here, keeping it
+      const { data: defaults, error: defErr } =
+        await supabase.from("apps").select("id").eq("is_default", true);
+      if (defErr) console.warn("defaults load warning:", defErr.message);
+      if (defaults?.length) {
+        const { error: insertErr } = await supabase
+          .from("user_apps")
+          .insert(defaults.map(a => ({ user_id: user.id, app_id: a.id })));
+        if (insertErr) console.warn("user_apps insert warning:", insertErr.message);
+      }
+
+      bumpLastActive();
+
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
         supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url,icon_url").eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
@@ -708,6 +809,12 @@ function App(){
     }
   }
 
+  async function handleLogout(){
+    await supabase.auth.signOut();
+    try { localStorage.removeItem(LS_LAST_ACTIVE); } catch {}
+    setMe(null); setRoute("login");
+  }
+
   if (route === "loading") {
     return (
       <div className="au-container" style={{ display:"grid", placeItems:"center", minHeight:"40vh" }}>
@@ -715,13 +822,10 @@ function App(){
       </div>
     );
   }
-
   if (route === "login")
-    return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={async()=>{ await supabase.auth.signOut(); setMe(null); setRoute("login"); }} />;
-
+    return <LoginPage err={err} form={loginForm} setForm={setLoginForm} onSubmit={handleLogin} goSignup={()=>{ setErr(""); setRoute("signup"); }} route={route} onLogout={handleLogout} />;
   if (route === "signup")
-    return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={async()=>{ await supabase.auth.signOut(); setMe(null); setRoute("login"); }} />;
-
+    return <SignupPage err={err} form={signupForm} setForm={setSignupForm} onSubmit={handleSignup} goLogin={()=>{ setErr(""); setRoute("login"); }} route={route} onLogout={handleLogout} />;
   if (route === "catalog")
     return (
       <CatalogPage
@@ -737,7 +841,7 @@ function App(){
     <DashboardPage
       me={me}
       route={route}
-      onLogout={async()=>{ await supabase.auth.signOut(); try{ localStorage.removeItem(LS_LAST_ACTIVE);}catch{}; setMe(null); setRoute("login"); }}
+      onLogout={handleLogout}
       catalog={catalog}
       myApps={myApps}
       setMyApps={setMyApps}
