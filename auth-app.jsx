@@ -159,13 +159,12 @@ function App() {
 
       const user = session.user;
 
-      const [{ data: apps }, { data: rows }] = await Promise.all([
-        supabase
-          .from("apps")
-          .select("id,name,href,description,badge,is_active,icon_url")
-          .eq("is_active", true),
-        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-      ]);
+      const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
+  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
+  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+]);
+
+console.log("Apps from Supabase:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -187,13 +186,12 @@ function App() {
 
       const user = data.user;
 
-      const [{ data: apps }, { data: rows }] = await Promise.all([
-        supabase
-          .from("apps")
-          .select("id,name,href,description,badge,is_active,icon_url")
-          .eq("is_active", true),
-        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-      ]);
+      const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
+  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
+  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+]);
+
+console.log("Apps from Supabase:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -229,13 +227,12 @@ function App() {
 
       const user = data.user;
 
-      const [{ data: apps }, { data: rows }] = await Promise.all([
-        supabase
-          .from("apps")
-          .select("id,name,href,description,badge,is_active,icon_url")
-          .eq("is_active", true),
-        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-      ]);
+     const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
+  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
+  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+]);
+
+console.log("Apps from Supabase:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
