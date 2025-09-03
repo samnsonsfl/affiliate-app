@@ -108,39 +108,18 @@ function filenameGuesses(name) {
   return Array.from(new Set(list));
 }
 
-/* ================== AppIcon (multi-source fallback) ================== */
+/* ================== AppIcon (static GitHub/Netlify) ================== */
 function AppIcon({ app, size = 54, radius = 14 }) {
-  const [srcIdx, setSrcIdx] = React.useState(0);
+  const [broken, setBroken] = React.useState(false);
 
-  // Build candidate URLs in order
-  const candidates = React.useMemo(() => {
-    const urls = [];
+  // Build the static file path from the app name
+  const safeName = (app?.name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-"); // sanitize → lowercase + dashes
 
-    // 1. Supabase icon_url from DB
-    if (app?.icon_url) urls.push(app.icon_url);
+  const src = `/app-logos/${safeName}.png`;
 
-    // 2. External logo API fallback
-    const domain = (() => {
-      try {
-        return new URL(app?.href || "").hostname;
-      } catch {
-        return "";
-      }
-    })();
-    if (domain) {
-      // Clearbit (high quality)
-      urls.push(`https://logo.clearbit.com/${domain}`);
-      // Google S2 (backup)
-      urls.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
-    }
-
-    return urls;
-  }, [app]);
-
-  const src = candidates[srcIdx];
-
-  // 3. Letter fallback
-  if (!src) {
+  if (broken || !app?.name) {
     return (
       <div
         className="app-icon"
@@ -177,19 +156,12 @@ function AppIcon({ app, size = 54, radius = 14 }) {
         src={src}
         alt=""
         loading="lazy"
-        onError={() => {
-          if (srcIdx < candidates.length - 1) {
-            setSrcIdx((i) => i + 1); // try next fallback
-          } else {
-            setSrcIdx(-1); // force letter fallback
-          }
-        }}
+        onError={() => setBroken(true)}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
   );
 }
-
 
 
 /* ================== Error Boundary ================== */
