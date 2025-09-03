@@ -1,4 +1,4 @@
-/* auth-app.jsx — Apps-United (Supabase + icon_url fixed) */
+/* auth-app.jsx — Apps-United (Supabase + icon_url debugging) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, Component } = React;
 
@@ -60,7 +60,10 @@ function AppIcon({ app, size = 54, radius = 14 }) {
         src={src}
         alt={app?.name || ""}
         loading="lazy"
-        onError={() => setBroken(true)}
+        onError={() => {
+          console.warn("❌ Image failed to load:", src);
+          setBroken(true);
+        }}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
@@ -178,10 +181,7 @@ function App() {
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
 
-      console.log(
-        "✅ Apps from Supabase:",
-        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
-      );
+      console.log("🔥 RAW apps from Supabase:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -212,10 +212,7 @@ function App() {
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
 
-      console.log(
-        "✅ Apps after login:",
-        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
-      );
+      console.log("🔥 RAW apps after login:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -260,10 +257,7 @@ function App() {
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
 
-      console.log(
-        "✅ Apps after signup:",
-        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
-      );
+      console.log("🔥 RAW apps after signup:", apps);
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -363,4 +357,3 @@ if (ReactDOM.createRoot) {
 } else {
   ReactDOM.render(mount, rootEl);
 }
-
