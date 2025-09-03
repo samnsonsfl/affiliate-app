@@ -108,11 +108,12 @@ function filenameGuesses(name) {
   return Array.from(new Set(list));
 }
 
-/* ================== Resilient AppIcon (Supabase-only) ================== */
+/* ================== AppIcon (Supabase-only) ================== */
 function AppIcon({ app, size=54, radius=14 }) {
+  const [broken, setBroken] = React.useState(false);
   const src = app?.icon_url;
 
-  if (!src) {
+  if (!src || broken) {
     return (
       <div
         className="app-icon"
@@ -149,6 +150,7 @@ function AppIcon({ app, size=54, radius=14 }) {
         src={src}
         alt=""
         loading="lazy"
+        onError={() => setBroken(true)}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
