@@ -82,6 +82,58 @@ function ensurePrefsShape(p) {
 }
 function uid() { return Math.random().toString(36).slice(2, 8); }
 
+/* ============ Icon helpers (robust fallback chain) ============ */
+function getFaviconFromHref(href, size = 128) {
+  try {
+    const host = new URL(href).hostname;
+    if (!host) return null;
+    return `https://www.google.com/s2/favicons?domain=${host}&sz=${size}`;
+  } catch { return null; }
+}
+function getIconUrl(app) {
+  return app?.icon_url || app?.logo_url || getFaviconFromHref(app?.href);
+}
+function AppIcon({ app, size = 54 }) {
+  const [src, setSrc] = useState(()=>getIconUrl(app));
+  const [failedOnce, setFailedOnce] = useState(false);
+
+  function handleError() {
+    if (!failedOnce) {
+      // First failure: try favicon fallback explicitly
+      const fallback = getFaviconFromHref(app?.href);
+      if (fallback && fallback !== src) {
+        setFailedOnce(true);
+        setSrc(fallback);
+        return;
+      }
+    }
+    // Second failure: give up and render letter (hide img)
+    setSrc(null);
+  }
+
+  if (!src) {
+    return (
+      <div className="app-icon" aria-hidden="true">
+        <span className="app-letter">{(app?.name || "?").slice(0,1)}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-icon" aria-hidden="true">
+      <img
+        className="app-icon__img"
+        src={src}
+        alt=""
+        loading="lazy"
+        width={size}
+        height={size}
+        onError={handleError}
+      />
+    </div>
+  );
+}
+
 /* ================== Shell UI (keeps your look) ================== */
 function Shell({ route, onLogout, children }) {
   return (
@@ -428,19 +480,7 @@ function DashboardPage({ me, route, onLogout, catalog, myApps, setMyApps, goCata
           {filteredApps.map(app => (
             <div key={app.id} className="app-tile">
               <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                <div className="app-icon" aria-hidden="true">
-                  {app.logo_url ? (
-                    <img
-                      className="app-icon__img"
-                      src={app.logo_url}
-                      alt=""
-                      loading="lazy"
-                      onError={(e)=>{ e.currentTarget.style.display='none'; }}
-                    />
-                  ) : (
-                    <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                  )}
-                </div>
+                <AppIcon app={app} />
                 <div className="app-name" title={app.name}>{app.name}</div>
               </a>
               <div className="app-actions au-row-between">
@@ -526,19 +566,7 @@ function CatalogPage({ route, onBack, catalog, myApps, addApp }) {
             return (
               <div key={app.id} className="app-tile">
                 <a className="app-body" href={app.href} target="_blank" rel="noopener noreferrer" title={app.name}>
-                  <div className="app-icon" aria-hidden="true">
-                    {app.logo_url ? (
-                      <img
-                        className="app-icon__img"
-                        src={app.logo_url}
-                        alt=""
-                        loading="lazy"
-                        onError={(e)=>{ e.currentTarget.style.display='none'; }}
-                      />
-                    ) : (
-                      <span className="app-letter">{(app.name || "?").slice(0,1)}</span>
-                    )}
-                  </div>
+                  <AppIcon app={app} />
                   <div className="app-name" title={app.name}>{app.name}</div>
                 </a>
                 <div className="app-actions">
@@ -625,9 +653,11 @@ function App(){
         .maybeSingle();
       if (profErr) console.warn("profiles warning:", profErr.message);
 
-      // catalog + my apps
+      // catalog + my apps (✅ request logo_url AND icon_url)
       const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
+        supabase.from("apps")
+          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
+          .eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -723,8 +753,11 @@ function App(){
         }
       }
 
+      // ✅ IMPORTANT: include icon_url here too
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
+        supabase.from("apps")
+          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
+          .eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
@@ -791,9 +824,11 @@ function App(){
 
       bumpLastActive();
 
-      // Load catalog & my apps after signup
+      // Load catalog & my apps after signup (✅ includes icon_url)
       const [{ data: apps, error: appsErr }, { data: rows2, error: rows2Err }] = await Promise.all([
-        supabase.from("apps").select("id,name,href,description,badge,is_active,logo_url").eq("is_active", true),
+        supabase.from("apps")
+          .select("id,name,href,description,badge,is_active,logo_url,icon_url")
+          .eq("is_active", true),
         supabase.from("user_apps").select("app_id").eq("user_id", user.id),
       ]);
       if (appsErr) console.warn("apps load warning:", appsErr.message);
