@@ -164,7 +164,10 @@ function App() {
   supabase.from("user_apps").select("app_id").eq("user_id", user.id),
 ]);
 
-console.log("Apps from Supabase:", apps);
+console.log("Apps from Supabase:", apps?.map(a => ({
+  name: a.name,
+  icon_url: a.icon_url
+})));
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -191,7 +194,10 @@ console.log("Apps from Supabase:", apps);
   supabase.from("user_apps").select("app_id").eq("user_id", user.id),
 ]);
 
-console.log("Apps from Supabase:", apps);
+console.log("Apps from Supabase:", apps?.map(a => ({
+  name: a.name,
+  icon_url: a.icon_url
+})));
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -232,7 +238,10 @@ console.log("Apps from Supabase:", apps);
   supabase.from("user_apps").select("app_id").eq("user_id", user.id),
 ]);
 
-console.log("Apps from Supabase:", apps);
+console.log("Apps from Supabase:", apps?.map(a => ({
+  name: a.name,
+  icon_url: a.icon_url
+})));
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
