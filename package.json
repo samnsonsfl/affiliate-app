@@ -1,0 +1,4 @@
+npm create vite@latest apps-united
+cd apps-united
+npm install
+npm run build
