@@ -1,16 +1,21 @@
-/* auth-app.jsx — Apps-United (resilient icons + Supabase + search/folders/sort + 4x/5x/6x) */
+/* auth-app.jsx — Apps-United (Supabase + icon_url fixed) */
 /* global React, ReactDOM, window */
 const { useState, useEffect, Component } = React;
 
 /* ================== Supabase config ================== */
 const SUPABASE_URL = "https://pvfxettbmykvezwahohh.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZnhldHRibXlrdmV6d2Fob2hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTc2MzMsImV4cCI6MjA3MjMzMzYzM30.M5V-N3jYDs1Eijqb6ZjscNfEOSMMARe8HI20sRdAOTQ";
 
 if (!window.supabase || typeof window.supabase.createClient !== "function") {
   throw new Error("Supabase client script missing.");
 }
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  },
 });
 
 /* ================== AppIcon ================== */
@@ -53,7 +58,7 @@ function AppIcon({ app, size = 54, radius = 14 }) {
     >
       <img
         src={src}
-        alt=""
+        alt={app?.name || ""}
         loading="lazy"
         onError={() => setBroken(true)}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -89,7 +94,9 @@ class ErrorBoundary extends Component {
             <h2 style={{ margin: "6px 0 8px", fontWeight: 700 }}>
               Something went wrong
             </h2>
-            <div className="au-note">Open your browser console to see details.</div>
+            <div className="au-note">
+              Open your browser console to see details.
+            </div>
           </div>
         </div>
       );
@@ -119,6 +126,7 @@ function App() {
   const [catalog, setCatalog] = useState([]);
   const [myApps, setMyApps] = useState([]);
 
+  /* ---------- Add/Remove Apps ---------- */
   async function addApp(app) {
     try {
       const { error } = await supabase
@@ -149,9 +157,12 @@ function App() {
     }
   }
 
+  /* ---------- Session Load ---------- */
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setRoute("login");
         return;
@@ -159,15 +170,18 @@ function App() {
 
       const user = session.user;
 
-      const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
-  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-]);
+      const [{ data: apps }, { data: rows }] = await Promise.all([
+        supabase
+          .from("apps")
+          .select("id,name,href,description,badge,is_active,icon_url")
+          .eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
 
-console.log("Apps from Supabase:", apps?.map(a => ({
-  name: a.name,
-  icon_url: a.icon_url
-})));
+      console.log(
+        "✅ Apps from Supabase:",
+        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
+      );
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -177,6 +191,7 @@ console.log("Apps from Supabase:", apps?.map(a => ({
     })();
   }, []);
 
+  /* ---------- Login ---------- */
   async function handleLogin(e) {
     e.preventDefault();
     setErr("");
@@ -189,15 +204,18 @@ console.log("Apps from Supabase:", apps?.map(a => ({
 
       const user = data.user;
 
-      const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
-  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-]);
+      const [{ data: apps }, { data: rows }] = await Promise.all([
+        supabase
+          .from("apps")
+          .select("id,name,href,description,badge,is_active,icon_url")
+          .eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
 
-console.log("Apps from Supabase:", apps?.map(a => ({
-  name: a.name,
-  icon_url: a.icon_url
-})));
+      console.log(
+        "✅ Apps after login:",
+        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
+      );
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -210,11 +228,12 @@ console.log("Apps from Supabase:", apps?.map(a => ({
     }
   }
 
+  /* ---------- Signup ---------- */
   async function handleSignup(e) {
     e.preventDefault();
     setErr("");
     try {
-      const { fullName, email, password, confirm, agree, optIn } = signupForm;
+      const { fullName, email, password, confirm, agree } = signupForm;
 
       if (!fullName.trim()) throw new Error("Please enter your full name.");
       if (!/\S+@\S+\.\S+/.test(email))
@@ -233,15 +252,18 @@ console.log("Apps from Supabase:", apps?.map(a => ({
 
       const user = data.user;
 
-     const [{ data: apps, error: appsErr }, { data: rows, error: rowsErr }] = await Promise.all([
-  supabase.from("apps").select("id,name,href,description,badge,is_active,icon_url").eq("is_active", true),
-  supabase.from("user_apps").select("app_id").eq("user_id", user.id),
-]);
+      const [{ data: apps }, { data: rows }] = await Promise.all([
+        supabase
+          .from("apps")
+          .select("id,name,href,description,badge,is_active,icon_url")
+          .eq("is_active", true),
+        supabase.from("user_apps").select("app_id").eq("user_id", user.id),
+      ]);
 
-console.log("Apps from Supabase:", apps?.map(a => ({
-  name: a.name,
-  icon_url: a.icon_url
-})));
+      console.log(
+        "✅ Apps after signup:",
+        apps?.map((a) => ({ name: a.name, icon_url: a.icon_url }))
+      );
 
       const mySet = new Set((rows || []).map((r) => r.app_id));
       setCatalog(apps || []);
@@ -254,6 +276,7 @@ console.log("Apps from Supabase:", apps?.map(a => ({
     }
   }
 
+  /* ---------- Render ---------- */
   if (route === "loading") {
     return <div>Loading…</div>;
   }
