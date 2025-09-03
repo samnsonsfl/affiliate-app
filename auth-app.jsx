@@ -110,59 +110,33 @@ function filenameGuesses(name) {
 
 /* ================== Resilient AppIcon (Supabase-only) ================== */
 function AppIcon({ app, size=54, radius=14 }) {
-  const [idx, setIdx] = React.useState(0);
+  const src = app?.icon_url;
 
-  const candidates = React.useMemo(() => {
-    const arr = [];
-
-    // 1. Exact fields from DB first
-    if (app?.icon_url) arr.push(app.icon_url);
-    if (app?.logo_url) arr.push(app.logo_url);
-
-    // 2. Known overrides for weird filenames
-    const override = OVERRIDES[app?.name || ""];
-    if (override) arr.push(bucketURL(override));
-
-    // 3. Best-guess filenames in your bucket
-    for (const guess of filenameGuesses(app?.name || "")) {
-      arr.push(bucketURL(guess));
-    }
-
-    // De-dupe while keeping order
-    return Array.from(new Set(arr));
-  }, [app]);
-
-  // 4. If everything fails, show first letter
-  const fallback = (
-    <div
-      className="app-icon"
-      aria-hidden="true"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radius,
-        background: "#1e293b",
-        color: "#fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 600,
-        fontSize: size * 0.5
-      }}
-    >
-      {(app?.name || "?").slice(0, 1)}
-    </div>
-  );
-
-  if (!candidates.length) return fallback;
-
-  const current = candidates[Math.min(idx, candidates.length - 1)];
-  const isLast = idx >= candidates.length - 1;
+  if (!src) {
+    return (
+      <div
+        className="app-icon"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          background: "#1e293b",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 600,
+          fontSize: size * 0.5
+        }}
+      >
+        {(app?.name || "?").slice(0, 1)}
+      </div>
+    );
+  }
 
   return (
     <div
       className="app-icon"
-      aria-hidden="true"
       style={{
         width: size,
         height: size,
@@ -172,19 +146,10 @@ function AppIcon({ app, size=54, radius=14 }) {
       }}
     >
       <img
-        className="app-icon__img"
-        src={current}
+        src={src}
         alt=""
         loading="lazy"
-        onError={() => {
-          if (!isLast) setIdx(i => i + 1);
-        }}
-        style={{
-          display: "block",
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
-        }}
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
   );
