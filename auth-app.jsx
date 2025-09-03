@@ -108,11 +108,11 @@ function filenameGuesses(name) {
   return Array.from(new Set(list));
 }
 
-/* ================== Resilient AppIcon component ================== */
+/* ================== Resilient AppIcon (Supabase-only) ================== */
 function AppIcon({ app, size=54, radius=14 }) {
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = React.useState(0);
 
-  const candidates = useMemo(() => {
+  const candidates = React.useMemo(() => {
     const arr = [];
 
     // 1. Exact fields from DB first
@@ -128,17 +128,29 @@ function AppIcon({ app, size=54, radius=14 }) {
       arr.push(bucketURL(guess));
     }
 
-    // ❌ Removed Google favicon fallback
-    // It will now *only* try Supabase + overrides.
-
     // De-dupe while keeping order
     return Array.from(new Set(arr));
   }, [app]);
 
-  // If everything fails, show letter
+  // 4. If everything fails, show first letter
   const fallback = (
-    <div className="app-icon" aria-hidden="true" style={{ width:size, height:size, borderRadius:radius }}>
-      <span className="app-letter">{(app?.name || "?").slice(0,1)}</span>
+    <div
+      className="app-icon"
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        background: "#1e293b",
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 600,
+        fontSize: size * 0.5
+      }}
+    >
+      {(app?.name || "?").slice(0, 1)}
     </div>
   );
 
@@ -148,18 +160,36 @@ function AppIcon({ app, size=54, radius=14 }) {
   const isLast = idx >= candidates.length - 1;
 
   return (
-    <div className="app-icon" aria-hidden="true" style={{ width:size, height:size, borderRadius:radius, overflow:"hidden" }}>
+    <div
+      className="app-icon"
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        overflow: "hidden",
+        background: "#f1f5f9"
+      }}
+    >
       <img
         className="app-icon__img"
         src={current}
         alt=""
         loading="lazy"
-        onError={()=>{ if (!isLast) setIdx(i=>i+1); }}
-        style={{ display:"block", width:"100%", height:"100%", objectFit:"cover" }}
+        onError={() => {
+          if (!isLast) setIdx(i => i + 1);
+        }}
+        style={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover"
+        }}
       />
     </div>
   );
 }
+
 
 
 /* ================== Error Boundary ================== */
