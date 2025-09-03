@@ -128,9 +128,8 @@ function AppIcon({ app, size=54, radius=14 }) {
       arr.push(bucketURL(guess));
     }
 
-    // 4. Last-resort favicon (skip affiliate hosts)
-    const fav = getFaviconURLFromHref(app?.href || "");
-    if (fav) arr.push(fav);
+    // ❌ Removed Google favicon fallback
+    // It will now *only* try Supabase + overrides.
 
     // De-dupe while keeping order
     return Array.from(new Set(arr));
@@ -161,6 +160,7 @@ function AppIcon({ app, size=54, radius=14 }) {
     </div>
   );
 }
+
 
 /* ================== Error Boundary ================== */
 class ErrorBoundary extends Component {
