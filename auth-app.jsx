@@ -108,12 +108,39 @@ function filenameGuesses(name) {
   return Array.from(new Set(list));
 }
 
-/* ================== AppIcon (Supabase-only) ================== */
-function AppIcon({ app, size=54, radius=14 }) {
-  const [broken, setBroken] = React.useState(false);
-  const src = app?.icon_url;
+/* ================== AppIcon (multi-source fallback) ================== */
+function AppIcon({ app, size = 54, radius = 14 }) {
+  const [srcIdx, setSrcIdx] = React.useState(0);
 
-  if (!src || broken) {
+  // Build candidate URLs in order
+  const candidates = React.useMemo(() => {
+    const urls = [];
+
+    // 1. Supabase icon_url from DB
+    if (app?.icon_url) urls.push(app.icon_url);
+
+    // 2. External logo API fallback
+    const domain = (() => {
+      try {
+        return new URL(app?.href || "").hostname;
+      } catch {
+        return "";
+      }
+    })();
+    if (domain) {
+      // Clearbit (high quality)
+      urls.push(`https://logo.clearbit.com/${domain}`);
+      // Google S2 (backup)
+      urls.push(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+    }
+
+    return urls;
+  }, [app]);
+
+  const src = candidates[srcIdx];
+
+  // 3. Letter fallback
+  if (!src) {
     return (
       <div
         className="app-icon"
@@ -127,7 +154,7 @@ function AppIcon({ app, size=54, radius=14 }) {
           alignItems: "center",
           justifyContent: "center",
           fontWeight: 600,
-          fontSize: size * 0.5
+          fontSize: size * 0.5,
         }}
       >
         {(app?.name || "?").slice(0, 1)}
@@ -143,14 +170,20 @@ function AppIcon({ app, size=54, radius=14 }) {
         height: size,
         borderRadius: radius,
         overflow: "hidden",
-        background: "#f1f5f9"
+        background: "#f1f5f9",
       }}
     >
       <img
         src={src}
         alt=""
         loading="lazy"
-        onError={() => setBroken(true)}
+        onError={() => {
+          if (srcIdx < candidates.length - 1) {
+            setSrcIdx((i) => i + 1); // try next fallback
+          } else {
+            setSrcIdx(-1); // force letter fallback
+          }
+        }}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
