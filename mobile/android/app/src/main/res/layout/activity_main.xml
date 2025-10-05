@@ -1,0 +1,24 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent">
+
+  <!-- Simple tab strip; we’ll make it tappable & closable -->
+  <HorizontalScrollView
+      android:layout_width="match_parent"
+      android:layout_height="48dp"
+      android:fillViewport="true">
+    <LinearLayout
+        android:id="@+id/tabStrip"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"/>
+  </HorizontalScrollView>
+
+  <!-- Container where we swap WebTabFragment instances -->
+  <FrameLayout
+      android:id="@+id/tabContainer"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1"/>
+</LinearLayout>
